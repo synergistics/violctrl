@@ -1,0 +1,23 @@
+{
+  "name": "violctrl",
+  "version": "1.0.0",
+  "description": "programmatically convert and send live audio as pitch-based commands",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/synergistics/violctrl.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/synergistics/violctrl/issues"
+  },
+  "homepage": "https://github.com/synergistics/violctrl#readme",
+  "dependencies": {
+    "express": "^4.15.3",
+    "ws": "^3.0.0"
+  }
+}
