@@ -2,9 +2,10 @@
   "name": "violctrl",
   "version": "1.0.0",
   "description": "programmatically convert and send live audio as pitch-based commands",
-  "main": "app.js",
+  "main": "server/app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "nodemon --watch server --watch client",
+    "build": "babel client/js/src -d client/js/dist/"
   },
   "repository": {
     "type": "git",
@@ -19,5 +20,9 @@
   "dependencies": {
     "express": "^4.15.3",
     "ws": "^3.0.0"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.24.1",
+    "babel-preset-env": "^1.6.0"
   }
 }
