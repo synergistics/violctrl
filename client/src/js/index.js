@@ -1,4 +1,4 @@
-let tuid;
+let tuid
 let paired = false
 const socket = new WebSocket(`ws://${location.hostname}:3000`)
 

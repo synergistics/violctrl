@@ -7,11 +7,12 @@ const WebSocket = require('ws')
 const clientDir = path.join(__dirname, '..', 'client')
 
 const app = express()
-app.use('/js', express.static(path.join(clientDir, 'js')))
-app.use('/css', express.static(path.join(clientDir, 'css')))
+// again stupid
+app.use('/js', express.static(path.join(clientDir, 'dist', 'js')))
+app.use('/css', express.static(path.join(clientDir, 'dist', 'css')))
 
 app.get('/', (req, res) => {
-    res.sendFile('index.html', { root: clientDir })
+    res.sendFile('index.html', { root: path.join(clientDir, 'dist') })
 })
 
 const server = http.createServer(app)
