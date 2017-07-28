@@ -1,11 +1,15 @@
+import pitchDetection from './pitchDetection'
+import messaging from './messaging'
+
 let tuid
+let ruid
 let paired = false
 const socket = new WebSocket(`ws://${location.hostname}:3000`)
 
 socket.addEventListener('open', (event) => {
-    socket.send(JSON.stringify({ 
-        type: 'transmitter_connect',
-    }))
+    // tell server a transmitter is connecting
+    let transmitterMsg = JSON.stringify(messaging.transmitterConnect())
+    socket.send(transmitterMsg)
 })
 
 // can I keep tuid local and passed around rather than global?
@@ -21,7 +25,17 @@ socket.addEventListener('message', (message) => {
         // how imma share that shit between files? pass the socket as an
         // argument?
         // not gonna worry about screen changes yet
-        // startAudio()
+
+         
+        
+        // start the pitch detection
+        // pitchDetection.init({
+        //     socket,
+        //     tuid,
+        //     ruid
+        // })
+        // start pitch detection (ask for mic and jazz first of course)
+        // start transmitting commands based on the note
     }
     else if (data.type === 'pair_failed') {
         // do some dom stuff 
@@ -36,15 +50,11 @@ socket.addEventListener('close', () => {
 
 let pairButton = document.getElementById('pair')
 pairButton.addEventListener('click', function() {
-    let ruid = document.getElementById('ruid').value
+    ruid = document.getElementById('ruid').value
     let key = document.getElementById('key').value
+    let pairMsg = JSON.stringify(messaging.pair(tuid, ruid, key))
 
-    socket.send(JSON.stringify({
-        type: 'pair',
-        tuid,
-        ruid,
-        key
-    }))
+    socket.send(pairMsg)
 })
 
 function handleConnectionError(error) {
@@ -54,13 +64,4 @@ function handleConnectionError(error) {
             break 
         } 
     } 
-}
-
-let connected = false
-
-function pair(receiverId, key) {
-    socket.send(JSON.stringify({
-        receiverId,
-        key
-    }))
 }
