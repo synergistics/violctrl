@@ -1,4 +1,4 @@
-import pitchDetection from './pitchDetection'
+import { PitchDetector } from './pitchDetection'
 import messaging from './messaging'
 
 let tuid
@@ -12,6 +12,10 @@ socket.addEventListener('open', (event) => {
     socket.send(transmitterMsg)
 })
 
+socket.addEventListener('close', () => {
+    console.log('done boys')
+})
+
 // can I keep tuid local and passed around rather than global?
 socket.addEventListener('message', (message) => {
     let data = JSON.parse(message.data)
@@ -20,22 +24,12 @@ socket.addEventListener('message', (message) => {
         tuid = data.tuid     
     }
     else if (data.type === 'pair_successful') {
-        // change screens, change connection state to paired
-        // this way the code controlling pitch messages can run properly 
-        // how imma share that shit between files? pass the socket as an
-        // argument?
-        // not gonna worry about screen changes yet
-
-         
         
-        // start the pitch detection
-        // pitchDetection.init({
-        //     socket,
-        //     tuid,
-        //     ruid
-        // })
-        // start pitch detection (ask for mic and jazz first of course)
-        // start transmitting commands based on the note
+        let context = new AudioContext()
+        let pd = new PitchDetector({
+            context,
+            bufferLength: 1024,
+        })
     }
     else if (data.type === 'pair_failed') {
         // do some dom stuff 
@@ -44,9 +38,14 @@ socket.addEventListener('message', (message) => {
     console.log(data)
 })
 
-socket.addEventListener('close', () => {
-    console.log('done boys')
-})
+function runThing(pd) {
+    pitch = pd.currentPitch()
+    // note = PitchDetector.toNote(pitch)
+    console.log(pd)
+    
+
+    // requestAnimationFrame(() => runThing(pd))
+}
 
 let pairButton = document.getElementById('pair')
 pairButton.addEventListener('click', function() {

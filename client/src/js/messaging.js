@@ -1,7 +1,7 @@
-// Implementation of ViolCtrl Websocket API for transmitters
+// Implementation of ViolCtrl Websocket API for transmitter devices
 function transmitterConnect() {
     return {
-        type: 'transmitter_connect' 
+        type: 'transmitter_connect'
     } 
 }
 
@@ -18,7 +18,8 @@ function command(tuid, ruid, command) {
     return {
         type: 'command',
         tuid,
-        ruid
+        ruid,
+        command
     }
 }
 

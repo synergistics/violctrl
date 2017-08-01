@@ -3,8 +3,6 @@
 
 var _pitchDetection = require('./pitchDetection');
 
-var _pitchDetection2 = _interopRequireDefault(_pitchDetection);
-
 var _messaging = require('./messaging');
 
 var _messaging2 = _interopRequireDefault(_messaging);
@@ -22,6 +20,10 @@ socket.addEventListener('open', function (event) {
     socket.send(transmitterMsg);
 });
 
+socket.addEventListener('close', function () {
+    console.log('done boys');
+});
+
 // can I keep tuid local and passed around rather than global?
 socket.addEventListener('message', function (message) {
     var data = JSON.parse(message.data);
@@ -29,21 +31,12 @@ socket.addEventListener('message', function (message) {
     if (data.type === 'tuid_assigned') {
         tuid = data.tuid;
     } else if (data.type === 'pair_successful') {
-        // change screens, change connection state to paired
-        // this way the code controlling pitch messages can run properly 
-        // how imma share that shit between files? pass the socket as an
-        // argument?
-        // not gonna worry about screen changes yet
 
-
-        // start the pitch detection
-        // pitchDetection.init({
-        //     socket,
-        //     tuid,
-        //     ruid
-        // })
-        // start pitch detection (ask for mic and jazz first of course)
-        // start transmitting commands based on the note
+        var context = new AudioContext();
+        var pd = new _pitchDetection.PitchDetector({
+            context: context,
+            bufferLength: 1024
+        });
     } else if (data.type === 'pair_failed') {
         // do some dom stuff 
     }
@@ -51,9 +44,13 @@ socket.addEventListener('message', function (message) {
     console.log(data);
 });
 
-socket.addEventListener('close', function () {
-    console.log('done boys');
-});
+function runThing(pd) {
+    pitch = pd.currentPitch();
+    // note = PitchDetector.toNote(pitch)
+    console.log(pd);
+
+    // requestAnimationFrame(() => runThing(pd))
+}
 
 var pairButton = document.getElementById('pair');
 pairButton.addEventListener('click', function () {
@@ -80,7 +77,7 @@ function handleConnectionError(error) {
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-// Implementation of ViolCtrl Websocket API for transmitters
+// Implementation of ViolCtrl Websocket API for transmitter devices
 function transmitterConnect() {
     return {
         type: 'transmitter_connect'
@@ -100,7 +97,8 @@ function command(tuid, ruid, command) {
     return {
         type: 'command',
         tuid: tuid,
-        ruid: ruid
+        ruid: ruid,
+        command: command
     };
 }
 
@@ -112,17 +110,138 @@ exports.default = {
 };
 
 },{}],3:[function(require,module,exports){
-"use strict";
+'use strict';
 
-var socket = void 0;
-var tuid = void 0;
-var ruid = void 0;
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
 
-var pitchMap = {};
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-// function init(options) {
-//     {socket, tuid, ruid} = options
-// }
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+/* options:
+  configish
+  - goodCorrelationThreshold
+  - rmsThreshold
+  -  
+
+  internal variables
+  - onDetect() // what to do when pitch is detected
+  - context :: AudioContext
+  - sampleRate
+  - 
+*/
+
+var PitchDetector = exports.PitchDetector = function () {
+    function PitchDetector(options) {
+        var _this = this;
+
+        _classCallCheck(this, PitchDetector);
+
+        this.context = options.context;
+        this.input = options.input;
+
+        this.goodCorrelationThreshold = 0.9;
+        this.minRMS = 0.01;
+        this.bufferLength = 1024;
+        this.maxSamples = Math.floor(this.bufferLength / 2);
+        this.correlations = new Array(this.maxSamples);
+        this.sampleRate = this.context.sampleRate;
+        this.running = false;
+
+        this.minPeriod = 2;
+        this.maxPeriod = this.maxSamples;
+
+        // binding. shouldn't be an issue
+        // an issue would arise if there were some situation where
+        // the function should bind to it's calling contexts.
+        // for all purposes so far, the only context that matters is
+        // the instance of PitchDetector
+        this.update = this.update.bind(this);
+        this.autoCorrelate = this.autoCorrelate.bind(this);
+
+        if (options.input === undefined) {
+            this.getLiveInput(function (err, stream) {
+                if (err) {
+                    // iDunno() 
+                }
+                _this.input = _this.context.createMediaStreamSource(stream);
+                // maybe more complex analysers can be passed as an option.
+                // they can be like decorators for autoCorrelate that can do extra jazz
+                _this.analyser = _this.context.createScriptProcessor(_this.bufferLength, 1, 0);
+                _this.analyser.onaudioprocess = _this.autoCorrelate;
+                _this.start();
+            });
+        }
+    }
+
+    _createClass(PitchDetector, [{
+        key: 'getLiveInput',
+        value: function getLiveInput(cb) {
+            navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+                cb(null, stream);
+            }).catch(function (err) {
+                console.log('getUserMedia exception');
+                cb(err, null);
+            });
+        }
+    }, {
+        key: 'start',
+        value: function start() {
+            this.input.connect(this.analyser);
+
+            if (!this.running) {
+                this.running = true;
+                requestAnimationFrame(this.update);
+            }
+        }
+    }, {
+        key: 'update',
+        value: function update() {
+            requestAnimationFrame(this.update);
+        }
+    }, {
+        key: 'autoCorrelate',
+        value: function autoCorrelate(audioEvent) {
+            if (!this.running) {
+                return;
+            }
+
+            var buffer = audioEvent.inputBuffer.getChannelData(0);
+            var bufferLength = this.bufferLength;
+            var maxSamples = this.maxSamples;
+            var rms = 0;
+            // let peak = 0
+            var period = 0;
+
+            // compute root mean sqaure
+            for (var i = 0; i < bufferLength; i++) {
+                rms += Math.pow(buffer[i], 2);
+            }
+            rms /= bufferLength;
+
+            // is there enough signal?
+            if (rms < this.rmsThreshold) {
+                return -1;
+            }
+
+            var correlation = 0;
+            for (var _i = this.minPeriod; _i < this.maxPeriod; _i++) {
+                for (var j = 0; j < maxSamples; j++) {
+                    correlation += Math.pow(buffer[j] - buffer[j + _i], 2);
+                }
+                // console.log(`run ${i}: correlation: ${correlation}`)
+            }
+
+            // 2. autocorrelate that shit
+            // 3. call onDetect with the computed stats
+            // this.onDetect(pitch)
+        }
+    }]);
+
+    return PitchDetector;
+}();
 
 // when a pitch is detected, if it matches one of the
 // entries in the command map say (437-443 -> forward), 
