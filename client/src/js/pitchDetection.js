@@ -16,16 +16,21 @@ export class PitchDetector {
         this.context = options.context
         this.input = options.input
         
-        this.goodCorrelationThreshold = 0.9 
-        this.minRMS = 0.01
+        this.correlationThreshold = 0.9
+        this.rmsThreshold = 0.05
+
         this.bufferLength = 1024
         this.maxSamples = Math.floor(this.bufferLength / 2)
         this.correlations = new Array(this.maxSamples)
         this.sampleRate = this.context.sampleRate
         this.running = false
 
-        this.minPeriod = 2
+        this.onDetect = options.onDetect
+
+        this.minPeriod = 4
         this.maxPeriod = this.maxSamples 
+
+        this.stats = {}
 
         // binding. shouldn't be an issue
         // an issue would arise if there were some situation where
@@ -72,7 +77,10 @@ export class PitchDetector {
     }
 
     update() {
-        requestAnimationFrame(this.update)
+        if (this.running) {
+            this.onDetect(this.stats)
+            requestAnimationFrame(this.update)
+        }
     }
 
     autoCorrelate(audioEvent) {
@@ -82,8 +90,6 @@ export class PitchDetector {
         let bufferLength = this.bufferLength
         let maxSamples = this.maxSamples 
         let rms = 0
-        // let peak = 0
-        let period = 0
 
         // compute root mean sqaure
         for (let i = 0; i < bufferLength; i++) {
@@ -93,20 +99,64 @@ export class PitchDetector {
 
         // is there enough signal?
         if (rms < this.rmsThreshold) {
-            return -1 
+            this.stats.frequency = null 
+            return;
         }
 
-        let correlation = 0
-        for (let i = this.minPeriod; i < this.maxPeriod; i++) {
-            for (let j = 0; j < maxSamples; j++) {
-                correlation += (buffer[j] - buffer[j + i])**2
+        let foundPitch = false
+        let bestOffset = -1 
+        let lastCorrelation = 0
+        let bestCorrelation = 0
+        // let closestMatches = [] 
+        for (let offset = this.minPeriod; offset < this.maxPeriod; offset++) {
+            let correlation = 0
+            for (let i = 0; i < maxSamples; i++) {
+                // correlation += Math.abs(buffer[j] - buffer[j + i])
+                correlation += Math.abs(buffer[i] - buffer[i + offset])
             } 
-            // console.log(`run ${i}: correlation: ${correlation}`)
+            correlation = 1 - correlation / maxSamples
+            // correlation = 1 - Math.sqrt(correlation / maxSamples)
+            // this.correlations[i] = correlation
+
+            // correlation is descending. 
+            if (correlation > lastCorrelation &&
+                correlation > this.correlationThreshold) {
+                if (correlation > bestCorrelation) {
+                    foundPitch = true
+                    bestCorrelation = correlation
+                    bestOffset = offset
+                }
+
+                // closestMatches.push({
+                //     period: offset,
+                //     correlation
+                // })
+                    // console.log(correlation, lastCorrelation)
+                    // foundPitch = true
+            }
+
+            else if (foundPitch) {
+                break
+            }
+
+            lastCorrelation = correlation
         }
 
-        // 2. autocorrelate that shit
-        // 3. call onDetect with the computed stats
-        // this.onDetect(pitch)
+        // if (closestMatches.length > 0) {
+        //     let closestMatch = closestMatches.reduce((a,b) => {
+        //         return a.correlation > b.correlation ? a : b 
+        //     })
+        //     console.log(closestMatch)
+        // }
+
+        
+        this.stats = { rms }
+        if (foundPitch) {
+            this.stats.frequency = this.sampleRate / bestOffset
+        }
+        else {
+            this.stats.frequency = null 
+        }
     }
 }
 

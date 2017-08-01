@@ -35,7 +35,10 @@ socket.addEventListener('message', function (message) {
         var context = new AudioContext();
         var pd = new _pitchDetection.PitchDetector({
             context: context,
-            bufferLength: 1024
+            bufferLength: 1024,
+            onDetect: function onDetect(stats) {
+                console.log(stats.frequency);
+            }
         });
     } else if (data.type === 'pair_failed') {
         // do some dom stuff 
@@ -142,16 +145,21 @@ var PitchDetector = exports.PitchDetector = function () {
         this.context = options.context;
         this.input = options.input;
 
-        this.goodCorrelationThreshold = 0.9;
-        this.minRMS = 0.01;
+        this.correlationThreshold = 0.9;
+        this.rmsThreshold = 0.05;
+
         this.bufferLength = 1024;
         this.maxSamples = Math.floor(this.bufferLength / 2);
         this.correlations = new Array(this.maxSamples);
         this.sampleRate = this.context.sampleRate;
         this.running = false;
 
-        this.minPeriod = 2;
+        this.onDetect = options.onDetect;
+
+        this.minPeriod = 4;
         this.maxPeriod = this.maxSamples;
+
+        this.stats = {};
 
         // binding. shouldn't be an issue
         // an issue would arise if there were some situation where
@@ -199,7 +207,10 @@ var PitchDetector = exports.PitchDetector = function () {
     }, {
         key: 'update',
         value: function update() {
-            requestAnimationFrame(this.update);
+            if (this.running) {
+                this.onDetect(this.stats);
+                requestAnimationFrame(this.update);
+            }
         }
     }, {
         key: 'autoCorrelate',
@@ -212,8 +223,6 @@ var PitchDetector = exports.PitchDetector = function () {
             var bufferLength = this.bufferLength;
             var maxSamples = this.maxSamples;
             var rms = 0;
-            // let peak = 0
-            var period = 0;
 
             // compute root mean sqaure
             for (var i = 0; i < bufferLength; i++) {
@@ -223,20 +232,60 @@ var PitchDetector = exports.PitchDetector = function () {
 
             // is there enough signal?
             if (rms < this.rmsThreshold) {
-                return -1;
+                this.stats.frequency = null;
+                return;
             }
 
-            var correlation = 0;
-            for (var _i = this.minPeriod; _i < this.maxPeriod; _i++) {
-                for (var j = 0; j < maxSamples; j++) {
-                    correlation += Math.pow(buffer[j] - buffer[j + _i], 2);
+            var foundPitch = false;
+            var bestOffset = -1;
+            var lastCorrelation = 0;
+            var bestCorrelation = 0;
+            // let closestMatches = [] 
+            for (var offset = this.minPeriod; offset < this.maxPeriod; offset++) {
+                var correlation = 0;
+                for (var _i = 0; _i < maxSamples; _i++) {
+                    // correlation += Math.abs(buffer[j] - buffer[j + i])
+                    correlation += Math.abs(buffer[_i] - buffer[_i + offset]);
                 }
-                // console.log(`run ${i}: correlation: ${correlation}`)
+                correlation = 1 - correlation / maxSamples;
+                // correlation = 1 - Math.sqrt(correlation / maxSamples)
+                // this.correlations[i] = correlation
+
+                // correlation is descending. 
+                if (correlation > lastCorrelation && correlation > this.correlationThreshold) {
+                    if (correlation > bestCorrelation) {
+                        foundPitch = true;
+                        bestCorrelation = correlation;
+                        bestOffset = offset;
+                    }
+
+                    // closestMatches.push({
+                    //     period: offset,
+                    //     correlation
+                    // })
+                    // console.log(correlation, lastCorrelation)
+                    // foundPitch = true
+                } else if (foundPitch) {
+                    break;
+                }
+
+                lastCorrelation = correlation;
             }
 
-            // 2. autocorrelate that shit
-            // 3. call onDetect with the computed stats
-            // this.onDetect(pitch)
+            // if (closestMatches.length > 0) {
+            //     let closestMatch = closestMatches.reduce((a,b) => {
+            //         return a.correlation > b.correlation ? a : b 
+            //     })
+            //     console.log(closestMatch)
+            // }
+
+
+            this.stats = { rms: rms };
+            if (foundPitch) {
+                this.stats.frequency = this.sampleRate / bestOffset;
+            } else {
+                this.stats.frequency = null;
+            }
         }
     }]);
 

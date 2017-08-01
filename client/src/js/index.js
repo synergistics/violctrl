@@ -29,6 +29,9 @@ socket.addEventListener('message', (message) => {
         let pd = new PitchDetector({
             context,
             bufferLength: 1024,
+            onDetect: (stats) => {
+                console.log(stats.frequency) 
+            }
         })
     }
     else if (data.type === 'pair_failed') {
