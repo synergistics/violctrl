@@ -17,17 +17,17 @@ export class PitchDetector {
         this.input = options.input
         
         this.correlationThreshold = 0.9
-        this.rmsThreshold = 0.05
+        this.rmsThreshold = 0.01
 
         this.bufferLength = 1024
-        this.maxSamples = Math.floor(this.bufferLength / 2)
+        this.maxSamples = Math.floor(this.bufferLength/2)
         this.correlations = new Array(this.maxSamples)
         this.sampleRate = this.context.sampleRate
         this.running = false
 
         this.onDetect = options.onDetect
 
-        this.minPeriod = 4
+        this.minPeriod = 2
         this.maxPeriod = this.maxSamples 
 
         this.stats = {}
@@ -112,13 +112,12 @@ export class PitchDetector {
             let correlation = 0
             for (let i = 0; i < maxSamples; i++) {
                 // correlation += Math.abs(buffer[j] - buffer[j + i])
-                correlation += Math.abs(buffer[i] - buffer[i + offset])
+                correlation += (buffer[i] - buffer[i + offset])**2
             } 
-            correlation = 1 - correlation / maxSamples
+            correlation = 1 - (correlation / maxSamples)**0.5
             // correlation = 1 - Math.sqrt(correlation / maxSamples)
-            // this.correlations[i] = correlation
+            this.correlations[offset] = correlation
 
-            // correlation is descending. 
             if (correlation > lastCorrelation &&
                 correlation > this.correlationThreshold) {
                 if (correlation > bestCorrelation) {
@@ -149,10 +148,20 @@ export class PitchDetector {
         //     console.log(closestMatch)
         // }
 
-        
         this.stats = { rms }
         if (foundPitch) {
-            this.stats.frequency = this.sampleRate / bestOffset
+
+            let prev = this.correlations[bestOffset - 1]
+            let next = this.correlations[bestOffset + 1]
+            let shift = (next - prev) / this.correlations[bestOffset]
+            shift /= 8
+
+            if (Number.isNaN(shift)) {
+                this.stats.frequency = null
+                return
+            }
+
+            this.stats.frequency = this.sampleRate / (bestOffset + shift)
         }
         else {
             this.stats.frequency = null 
@@ -160,6 +169,9 @@ export class PitchDetector {
     }
 }
 
+function pitchToNote() {
+    
+}
 
 
 // when a pitch is detected, if it matches one of the

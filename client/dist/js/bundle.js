@@ -31,13 +31,18 @@ socket.addEventListener('message', function (message) {
     if (data.type === 'tuid_assigned') {
         tuid = data.tuid;
     } else if (data.type === 'pair_successful') {
-
         var context = new AudioContext();
         var pd = new _pitchDetection.PitchDetector({
             context: context,
             bufferLength: 1024,
             onDetect: function onDetect(stats) {
-                console.log(stats.frequency);
+                var pitchElem = document.getElementById('pitch');
+                var frequency = stats.frequency;
+                if (frequency) {
+                    pitchElem.innerHTML = frequency;
+                } else {
+                    pitchElem.innerHTML = 'nil';
+                }
             }
         });
     } else if (data.type === 'pair_failed') {
@@ -47,14 +52,6 @@ socket.addEventListener('message', function (message) {
     console.log(data);
 });
 
-function runThing(pd) {
-    pitch = pd.currentPitch();
-    // note = PitchDetector.toNote(pitch)
-    console.log(pd);
-
-    // requestAnimationFrame(() => runThing(pd))
-}
-
 var pairButton = document.getElementById('pair');
 pairButton.addEventListener('click', function () {
     ruid = document.getElementById('ruid').value;
@@ -63,16 +60,6 @@ pairButton.addEventListener('click', function () {
 
     socket.send(pairMsg);
 });
-
-function handleConnectionError(error) {
-    switch (error.type) {
-        case 'bad credentials':
-            {
-                console.log('couldn\'t pair to device');
-                break;
-            }
-    }
-}
 
 },{"./messaging":2,"./pitchDetection":3}],2:[function(require,module,exports){
 'use strict';
@@ -146,7 +133,7 @@ var PitchDetector = exports.PitchDetector = function () {
         this.input = options.input;
 
         this.correlationThreshold = 0.9;
-        this.rmsThreshold = 0.05;
+        this.rmsThreshold = 0.01;
 
         this.bufferLength = 1024;
         this.maxSamples = Math.floor(this.bufferLength / 2);
@@ -156,7 +143,7 @@ var PitchDetector = exports.PitchDetector = function () {
 
         this.onDetect = options.onDetect;
 
-        this.minPeriod = 4;
+        this.minPeriod = 2;
         this.maxPeriod = this.maxSamples;
 
         this.stats = {};
@@ -245,13 +232,12 @@ var PitchDetector = exports.PitchDetector = function () {
                 var correlation = 0;
                 for (var _i = 0; _i < maxSamples; _i++) {
                     // correlation += Math.abs(buffer[j] - buffer[j + i])
-                    correlation += Math.abs(buffer[_i] - buffer[_i + offset]);
+                    correlation += Math.pow(buffer[_i] - buffer[_i + offset], 2);
                 }
-                correlation = 1 - correlation / maxSamples;
+                correlation = 1 - Math.pow(correlation / maxSamples, 0.5);
                 // correlation = 1 - Math.sqrt(correlation / maxSamples)
-                // this.correlations[i] = correlation
+                this.correlations[offset] = correlation;
 
-                // correlation is descending. 
                 if (correlation > lastCorrelation && correlation > this.correlationThreshold) {
                     if (correlation > bestCorrelation) {
                         foundPitch = true;
@@ -279,10 +265,20 @@ var PitchDetector = exports.PitchDetector = function () {
             //     console.log(closestMatch)
             // }
 
-
             this.stats = { rms: rms };
             if (foundPitch) {
-                this.stats.frequency = this.sampleRate / bestOffset;
+
+                var prev = this.correlations[bestOffset - 1];
+                var next = this.correlations[bestOffset + 1];
+                var shift = (next - prev) / this.correlations[bestOffset];
+                shift /= 8;
+
+                if (Number.isNaN(shift)) {
+                    this.stats.frequency = null;
+                    return;
+                }
+
+                this.stats.frequency = this.sampleRate / (bestOffset + shift);
             } else {
                 this.stats.frequency = null;
             }
@@ -291,6 +287,8 @@ var PitchDetector = exports.PitchDetector = function () {
 
     return PitchDetector;
 }();
+
+function pitchToNote() {}
 
 // when a pitch is detected, if it matches one of the
 // entries in the command map say (437-443 -> forward), 

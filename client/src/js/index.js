@@ -24,13 +24,18 @@ socket.addEventListener('message', (message) => {
         tuid = data.tuid     
     }
     else if (data.type === 'pair_successful') {
-        
         let context = new AudioContext()
         let pd = new PitchDetector({
             context,
             bufferLength: 1024,
             onDetect: (stats) => {
-                console.log(stats.frequency) 
+                let pitchElem = document.getElementById('pitch')
+                let frequency = stats.frequency
+                if (frequency) {
+                    pitchElem.innerHTML = frequency
+                } else {
+                    pitchElem.innerHTML = 'nil' 
+                }
             }
         })
     }
@@ -41,15 +46,6 @@ socket.addEventListener('message', (message) => {
     console.log(data)
 })
 
-function runThing(pd) {
-    pitch = pd.currentPitch()
-    // note = PitchDetector.toNote(pitch)
-    console.log(pd)
-    
-
-    // requestAnimationFrame(() => runThing(pd))
-}
-
 let pairButton = document.getElementById('pair')
 pairButton.addEventListener('click', function() {
     ruid = document.getElementById('ruid').value
@@ -58,12 +54,3 @@ pairButton.addEventListener('click', function() {
 
     socket.send(pairMsg)
 })
-
-function handleConnectionError(error) {
-    switch (error.type) {
-        case 'bad credentials': {
-            console.log('couldn\'t pair to device')
-            break 
-        } 
-    } 
-}
