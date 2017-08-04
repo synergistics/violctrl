@@ -1,3 +1,4 @@
+import { basicChromatic } from './pitchSchemes'
 import { PitchDetector } from './pitchDetection'
 import messaging from './messaging'
 
@@ -29,12 +30,21 @@ socket.addEventListener('message', (message) => {
             context,
             bufferLength: 1024,
             onDetect: (stats) => {
+                // do DOM stuff
+                // convert pitches to commands
+                // do socket stuff
+
                 let pitchElem = document.getElementById('pitch')
+                let rmsElem = document.getElementById('rms')
+                let volumeElem = document.getElementById('volume')
+                rmsElem.innerHTML = stats.rms
+                volumeElem.innerHTML = stats.peak
                 let frequency = stats.frequency
+                pitchElem.innerHTML = frequency
                 if (frequency) {
-                    pitchElem.innerHTML = frequency
+                    // let command = commands.schemes.basicChromatic(frequency) 
                 } else {
-                    pitchElem.innerHTML = 'nil' 
+                    // pitchElem.innerHTML = 'nil' 
                 }
             }
         })

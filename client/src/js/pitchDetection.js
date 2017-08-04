@@ -17,7 +17,7 @@ export class PitchDetector {
         this.input = options.input
         
         this.correlationThreshold = 0.9
-        this.rmsThreshold = 0.01
+        this.rmsThreshold = 0.05
 
         this.bufferLength = 1024
         this.maxSamples = Math.floor(this.bufferLength/2)
@@ -48,7 +48,9 @@ export class PitchDetector {
                 this.input = this.context.createMediaStreamSource(stream)
                 // maybe more complex analysers can be passed as an option.
                 // they can be like decorators for autoCorrelate that can do extra jazz
+                // create analyser node with 1 input and 0 outputs
                 this.analyser = this.context.createScriptProcessor(this.bufferLength, 1, 0)
+                // this.analyser.fftSize = 2048
                 this.analyser.onaudioprocess = this.autoCorrelate
                 this.start()        
             })
@@ -90,12 +92,19 @@ export class PitchDetector {
         let bufferLength = this.bufferLength
         let maxSamples = this.maxSamples 
         let rms = 0
+        let volume = 0
+        let peak = 0
 
         // compute root mean sqaure
         for (let i = 0; i < bufferLength; i++) {
+            if (buffer[i] > peak) {
+                peak = buffer[i] 
+            }
+            volume += Math.abs(buffer[i])
             rms += buffer[i]**2
         }
-        rms /= bufferLength
+        volume /= bufferLength
+        rms = Math.sqrt(rms/bufferLength) 
 
         // is there enough signal?
         if (rms < this.rmsThreshold) {
@@ -105,9 +114,10 @@ export class PitchDetector {
 
         let foundPitch = false
         let bestOffset = -1 
-        let lastCorrelation = 0
+        let lastCorrelation = 1
         let bestCorrelation = 0
-        // let closestMatches = [] 
+
+        // 
         for (let offset = this.minPeriod; offset < this.maxPeriod; offset++) {
             let correlation = 0
             for (let i = 0; i < maxSamples; i++) {
@@ -120,20 +130,12 @@ export class PitchDetector {
 
             if (correlation > lastCorrelation &&
                 correlation > this.correlationThreshold) {
+                foundPitch = true
                 if (correlation > bestCorrelation) {
-                    foundPitch = true
                     bestCorrelation = correlation
                     bestOffset = offset
                 }
-
-                // closestMatches.push({
-                //     period: offset,
-                //     correlation
-                // })
-                    // console.log(correlation, lastCorrelation)
-                    // foundPitch = true
             }
-
             else if (foundPitch) {
                 break
             }
@@ -141,30 +143,19 @@ export class PitchDetector {
             lastCorrelation = correlation
         }
 
-        // if (closestMatches.length > 0) {
-        //     let closestMatch = closestMatches.reduce((a,b) => {
-        //         return a.correlation > b.correlation ? a : b 
-        //     })
-        //     console.log(closestMatch)
-        // }
-
-        this.stats = { rms }
+        this.stats = { rms, volume, peak }
         if (foundPitch) {
-
             let prev = this.correlations[bestOffset - 1]
             let next = this.correlations[bestOffset + 1]
-            let shift = (next - prev) / this.correlations[bestOffset]
+            let best = this.correlations[bestOffset]
+            console.log(bestOffset)
+            let shift = (next - prev) / best 
             shift /= 8
 
-            if (Number.isNaN(shift)) {
-                this.stats.frequency = null
-                return
+            let frequency = this.sampleRate / (bestOffset + shift)
+            this.stats.frequency = frequency
+            if (!Number.isNaN(shift)) {
             }
-
-            this.stats.frequency = this.sampleRate / (bestOffset + shift)
-        }
-        else {
-            this.stats.frequency = null 
         }
     }
 }
