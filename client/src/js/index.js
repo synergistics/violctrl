@@ -8,7 +8,7 @@ import * as msg from './messages'
 let tuid
 let ruid
 let paired = false
-const socket = new Websocket('wss://violctrl.herokuapp.com')
+const socket = new WebSocket('wss://violctrl.herokuapp.com')
 // const socket = new WebSocket(`wss://${location.hostname}`)
 
 socket.addEventListener('open', (event) => {

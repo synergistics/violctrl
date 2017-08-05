@@ -54,7 +54,7 @@ var tuid = void 0; // TODO: TRY LODASH
 
 var ruid = void 0;
 var paired = false;
-var socket = new Websocket('wss://violctrl.herokuapp.com');
+var socket = new WebSocket('wss://violctrl.herokuapp.com');
 // const socket = new WebSocket(`wss://${location.hostname}`)
 
 socket.addEventListener('open', function (event) {
