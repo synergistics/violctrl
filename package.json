@@ -4,7 +4,6 @@
   "description": "programmatically convert and send live audio as pitch-based commands",
   "main": "server/app.js",
   "scripts": {
-    "start": "nodemon --watch server --watch client",
     "build": "babel client/js/src -d client/js/dist/"
   },
   "repository": {
@@ -29,6 +28,7 @@
     "gulp": "^3.9.1",
     "gulp-babel": "^6.1.2",
     "gulp-nodemon": "^2.2.1",
+    "nodemon": "^1.11.0",
     "vinyl-source-stream": "^1.1.0"
   }
 }
