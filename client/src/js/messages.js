@@ -16,7 +16,7 @@ function pair(tuid, ruid, key) {
 
 function instruction(tuid, ruid, instruction) {
     return {
-        type: 'command',
+        type: 'instruction',
         tuid,
         ruid,
         instruction

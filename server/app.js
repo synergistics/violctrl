@@ -25,6 +25,9 @@ server.listen(3000, () => {
 let receivers = {
     // we love jessica
     'jessica': {
+        socket: {
+            send: console.log
+        },
         key: 'hotlicks',
         allowedTransmitters: new Set() 
     }
@@ -105,7 +108,7 @@ wss.on('connection', (ws, req) => {
                 }))
             }
         }
-        else if (data.type === 'command') {
+        else if (data.type === 'instruction') {
             let tuid = data.tuid
             let ruid = data.ruid
             
@@ -114,10 +117,10 @@ wss.on('connection', (ws, req) => {
             //     console.log(`receiver ${ruid} does not exist`)
             // }
 
-            // let receiver = receivers[ruid]
-            // if (receiver.allowedTransmitters.has(tuid)) {
-            //     receiver.socket.send(data.command) 
-            // }
+            let receiver = receivers[ruid]
+            if (receiver.allowedTransmitters.has(tuid)) {
+                receiver.socket.send(data.instruction) 
+            }
         }
     })
 

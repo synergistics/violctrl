@@ -13,6 +13,13 @@
 
 import { Pitch } from './pitch'
 
+const detectionErrors = {
+    NO_ERROR: 0,
+    DETECTOR_STOPPED: 1,
+    NOT_ENOUGH_SIGNAL: 2,
+    CORRELATION_NOT_FOUND: 3
+}
+
 class PitchDetector {
     constructor(options) {
         this.context = options.context
@@ -86,12 +93,15 @@ class PitchDetector {
         }
     }
 
+    // this function is begging to be made monadic
     autoCorrelate(audioEvent) {
-        if (!this.running) { return }
+        // no error
+        this.stats = {} 
 
-        let lastPitch = this.stats.pitch || Pitch.fromFrequency(-1)
-        this.stats = { lastPitch }
-        // this.stats = {}
+        if (!this.running) { 
+            this.stats.error = detectionErrors.DETECTOR_STOPPED 
+            return
+        }
 
         let buffer = audioEvent.inputBuffer.getChannelData(0)
         let bufferLength = this.bufferLength
@@ -110,7 +120,8 @@ class PitchDetector {
 
         // is there enough signal?
         if (rms < this.rmsThreshold) {
-            return;
+            this.stats.error = detectionErrors.NOT_ENOUGH_SIGNAL 
+            return
         }
 
         let foundPitch = false
@@ -144,15 +155,22 @@ class PitchDetector {
                 shift /= 8
 
                 let frequency = this.sampleRate / (bestOffset + shift)
-                
+
+                this.stats.error = detectionErrors.NO_ERROR
                 this.stats.pitch = Pitch.fromFrequency(frequency)
-                break
+                break 
             }
+
             lastCorrelation = correlation
+        }
+
+        if (!foundPitch) {
+            this.stats.error = detectionErrors.CORRELATION_NOT_FOUND
         }
     }
 }
 
 export {
+    detectionErrors,
     PitchDetector
 }

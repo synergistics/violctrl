@@ -1,9 +1,8 @@
 // TODO: TRY LODASH
 import { basicChromatic } from './pitch/schemes'
-import { PitchDetector } from './pitch/detection'
+import { PitchDetector, detectionErrors } from './pitch/detection'
 import { frequencyToNote } from './pitch/util/conversions'
-import { speedsLR } from './ctrl'
-// maybe turn transmitter into a class?
+import * as ctrl from './ctrl'
 import * as msg from './messages'
 
 let tuid
@@ -35,32 +34,42 @@ socket.addEventListener('message', (message) => {
         let noteElem = document.getElementById('note')
         let octaveElem = document.getElementById('octave')
 
+        let lastInstruction = ctrl.stop
         let pd = new PitchDetector({
             context,
             bufferLength: 1024,
             onDetect: (stats) => {
-                // let prevPitch = stats.prevPitch
-                let pitch = stats.pitch
-                let lastPitch = stats.lastPitch
-                if (pitch) {
-                    if (lastPitch && pitch.note !== lastPitch.note) {
-                        frequencyElem.innerHTML = pitch.frequency
-                        noteElem.innerHTML = pitch.note
-                        octaveElem.innerHTML = pitch.octave()
+                if (stats.error === detectionErrors.NO_ERROR) {
+                    let pitch = stats.pitch
+                    frequencyElem.innerHTML = pitch.frequency
+                    noteElem.innerHTML = pitch.note
+                    octaveElem.innerHTML = pitch.octave()
 
-                        let instruction = basicChromatic(pitch)
-                        console.log(instruction)
+                    let instruction = basicChromatic(pitch)
+                    if (!ctrl.isSameInstruction(instruction, lastInstruction)) {
+                        // console.log(instruction)
                         let instructionMsg = msg.instruction(tuid, ruid, instruction) 
                         socket.send(JSON.stringify(instructionMsg))
+
+                        lastInstruction = instruction 
                     }
                 }
                 else {
                     frequencyElem.innerHTML = 'nil'
                     noteElem.innerHTML = 'nil'
 
-                    let instruction = speedsLR(0,0)
-                    let instructionMsg = msg.instruction(tuid, ruid, instruction)
-                    socket.send(JSON.stringify(instructionMsg))
+                    if (stats.error === detectionErrors.NOT_ENOUGH_SIGNAL) {
+                        if (!ctrl.isSameInstruction(lastInstruction, ctrl.stop)) {
+                            frequencyElem.innerHTML = 'nil'
+                            noteElem.innerHTML = 'nil'
+
+                            let instruction = ctrl.stop
+                            let instructionMsg = msg.instruction(tuid, ruid, instruction)
+                            socket.send(JSON.stringify(instructionMsg))
+
+                            lastInstruction = instruction
+                        }
+                    }
                 }
             }
         })

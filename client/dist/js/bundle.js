@@ -4,7 +4,8 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.speedsLR = speedsLR;
+var stop = speedsLR(0, 0);
+
 function speedsLR(leftSpeed, rightSpeed) {
     return {
         type: 'speedsLR',
@@ -12,6 +13,23 @@ function speedsLR(leftSpeed, rightSpeed) {
         rightSpeed: rightSpeed
     };
 }
+
+function isSameInstruction(i1, i2) {
+    if (i1.type !== i2.type) {
+        return false;
+    }
+
+    switch (i1.type) {
+        case 'speedsLR':
+            {
+                return i1.leftSpeed === i2.leftSpeed && i1.rightSpeed === i2.rightSpeed;
+            }
+    }
+}
+
+exports.isSameInstruction = isSameInstruction;
+exports.speedsLR = speedsLR;
+exports.stop = stop;
 
 },{}],2:[function(require,module,exports){
 'use strict';
@@ -24,15 +42,15 @@ var _conversions = require('./pitch/util/conversions');
 
 var _ctrl = require('./ctrl');
 
+var ctrl = _interopRequireWildcard(_ctrl);
+
 var _messages = require('./messages');
 
 var msg = _interopRequireWildcard(_messages);
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-var tuid = void 0;
-// maybe turn transmitter into a class?
-// TODO: TRY LODASH
+var tuid = void 0; // TODO: TRY LODASH
 
 var ruid = void 0;
 var paired = false;
@@ -61,31 +79,41 @@ socket.addEventListener('message', function (message) {
         var noteElem = document.getElementById('note');
         var octaveElem = document.getElementById('octave');
 
+        var lastInstruction = ctrl.stop;
         var pd = new _detection.PitchDetector({
             context: context,
             bufferLength: 1024,
             onDetect: function onDetect(stats) {
-                // let prevPitch = stats.prevPitch
-                var pitch = stats.pitch;
-                var lastPitch = stats.lastPitch;
-                if (pitch) {
-                    if (lastPitch && pitch.note !== lastPitch.note) {
-                        frequencyElem.innerHTML = pitch.frequency;
-                        noteElem.innerHTML = pitch.note;
-                        octaveElem.innerHTML = pitch.octave();
+                if (stats.error === _detection.detectionErrors.NO_ERROR) {
+                    var pitch = stats.pitch;
+                    frequencyElem.innerHTML = pitch.frequency;
+                    noteElem.innerHTML = pitch.note;
+                    octaveElem.innerHTML = pitch.octave();
 
-                        var instruction = (0, _schemes.basicChromatic)(pitch);
-                        console.log(instruction);
+                    var instruction = (0, _schemes.basicChromatic)(pitch);
+                    if (!ctrl.isSameInstruction(instruction, lastInstruction)) {
+                        // console.log(instruction)
                         var instructionMsg = msg.instruction(tuid, ruid, instruction);
                         socket.send(JSON.stringify(instructionMsg));
+
+                        lastInstruction = instruction;
                     }
                 } else {
                     frequencyElem.innerHTML = 'nil';
                     noteElem.innerHTML = 'nil';
 
-                    var _instruction = (0, _ctrl.speedsLR)(0, 0);
-                    var _instructionMsg = msg.instruction(tuid, ruid, _instruction);
-                    socket.send(JSON.stringify(_instructionMsg));
+                    if (stats.error === _detection.detectionErrors.NOT_ENOUGH_SIGNAL) {
+                        if (!ctrl.isSameInstruction(lastInstruction, ctrl.stop)) {
+                            frequencyElem.innerHTML = 'nil';
+                            noteElem.innerHTML = 'nil';
+
+                            var _instruction = ctrl.stop;
+                            var _instructionMsg = msg.instruction(tuid, ruid, _instruction);
+                            socket.send(JSON.stringify(_instructionMsg));
+
+                            lastInstruction = _instruction;
+                        }
+                    }
                 }
             }
         });
@@ -129,7 +157,7 @@ function pair(tuid, ruid, key) {
 
 function instruction(tuid, ruid, instruction) {
     return {
-        type: 'command',
+        type: 'instruction',
         tuid: tuid,
         ruid: ruid,
         instruction: instruction
@@ -147,7 +175,7 @@ exports.instruction = instruction;
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.PitchDetector = undefined;
+exports.PitchDetector = exports.detectionErrors = undefined;
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /* options:
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        configish
@@ -165,6 +193,13 @@ var _createClass = function () { function defineProperties(target, props) { for 
 var _pitch = require('./pitch');
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var detectionErrors = {
+    NO_ERROR: 0,
+    DETECTOR_STOPPED: 1,
+    NOT_ENOUGH_SIGNAL: 2,
+    CORRELATION_NOT_FOUND: 3
+};
 
 var PitchDetector = function () {
     function PitchDetector(options) {
@@ -243,18 +278,21 @@ var PitchDetector = function () {
                 requestAnimationFrame(this.update);
             }
         }
+
+        // this function is begging to be made monadic
+
     }, {
         key: 'autoCorrelate',
         value: function autoCorrelate(audioEvent) {
+            // no error
+            this.stats = {};
+
             if (!this.running) {
+                this.stats.error = detectionErrors.DETECTOR_STOPPED;
                 return;
             }
 
-            var lastPitch = this.stats.pitch || _pitch.Pitch.fromFrequency(-1);
-            this.stats = { lastPitch: lastPitch
-                // this.stats = {}
-
-            };var buffer = audioEvent.inputBuffer.getChannelData(0);
+            var buffer = audioEvent.inputBuffer.getChannelData(0);
             var bufferLength = this.bufferLength;
             var maxSamples = this.maxSamples;
             var rms = 0;
@@ -271,6 +309,7 @@ var PitchDetector = function () {
 
             // is there enough signal?
             if (rms < this.rmsThreshold) {
+                this.stats.error = detectionErrors.NOT_ENOUGH_SIGNAL;
                 return;
             }
 
@@ -304,10 +343,16 @@ var PitchDetector = function () {
 
                     var frequency = this.sampleRate / (bestOffset + shift);
 
+                    this.stats.error = detectionErrors.NO_ERROR;
                     this.stats.pitch = _pitch.Pitch.fromFrequency(frequency);
                     break;
                 }
+
                 lastCorrelation = correlation;
+            }
+
+            if (!foundPitch) {
+                this.stats.error = detectionErrors.CORRELATION_NOT_FOUND;
             }
         }
     }]);
@@ -315,6 +360,7 @@ var PitchDetector = function () {
     return PitchDetector;
 }();
 
+exports.detectionErrors = detectionErrors;
 exports.PitchDetector = PitchDetector;
 
 },{"./pitch":5}],5:[function(require,module,exports){
@@ -454,6 +500,8 @@ function basicChromatic(pitch) {
     } else if (octave === 5) {
         scaleFactor = 1;
         return (0, _ctrl.speedsLR)(leftSpeed * scaleFactor, rightSpeed * scaleFactor);
+    } else {
+        return _ctrl.stop;
     }
 } /* Module Description:
    * Functions that map frequencies to commands for the RPi

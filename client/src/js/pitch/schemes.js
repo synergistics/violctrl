@@ -2,7 +2,7 @@
  * Functions that map frequencies to commands for the RPi
  */
 
-import { speedsLR } from '../ctrl'
+import { speedsLR, stop } from '../ctrl'
 
 
 // really obscure pitch scheme specific for viola 
@@ -58,7 +58,9 @@ function basicChromatic(pitch) {
         scaleFactor = 1
         return speedsLR(leftSpeed*scaleFactor, rightSpeed*scaleFactor)
     }
-
+    else {
+        return stop 
+    }
 }
 
 export {
