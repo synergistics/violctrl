@@ -16,21 +16,23 @@ function speedsLR(leftSpeed, rightSpeed) {
 },{}],2:[function(require,module,exports){
 'use strict';
 
-var _pitchSchemes = require('./pitchSchemes');
+var _schemes = require('./pitch/schemes');
 
-var _pitchDetection = require('./pitchDetection');
+var _detection = require('./pitch/detection');
 
-var _notes = require('./util/notes');
+var _conversions = require('./pitch/util/conversions');
 
-var _ctrlCommands = require('./ctrlCommands');
+var _ctrl = require('./ctrl');
 
-var _messaging = require('./messaging');
+var _messages = require('./messages');
 
-var _messaging2 = _interopRequireDefault(_messaging);
+var msg = _interopRequireWildcard(_messages);
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-var tuid = void 0; // TODO: TRY LODASH
+var tuid = void 0;
+// maybe turn transmitter into a class?
+// TODO: TRY LODASH
 
 var ruid = void 0;
 var paired = false;
@@ -38,8 +40,8 @@ var socket = new WebSocket('ws://' + location.hostname + ':3000');
 
 socket.addEventListener('open', function (event) {
     // tell server a transmitter is connecting
-    var transmitterMsg = JSON.stringify(_messaging2.default.transmitterConnect());
-    socket.send(transmitterMsg);
+    var connect = msg.connect();
+    socket.send(JSON.stringify(connect));
 });
 
 socket.addEventListener('close', function () {
@@ -59,7 +61,7 @@ socket.addEventListener('message', function (message) {
         var noteElem = document.getElementById('note');
         var octaveElem = document.getElementById('octave');
 
-        var pd = new _pitchDetection.PitchDetector({
+        var pd = new _detection.PitchDetector({
             context: context,
             bufferLength: 1024,
             onDetect: function onDetect(stats) {
@@ -70,25 +72,16 @@ socket.addEventListener('message', function (message) {
                     noteElem.innerHTML = pitch.note;
                     octaveElem.innerHTML = pitch.octave;
 
-                    var command = (0, _pitchSchemes.basicChromatic)(pitch);
+                    var command = (0, _schemes.basicChromatic)(pitch);
                     console.log(command);
-                    var commandMsg = JSON.stringify(_messaging2.default.command(tuid, ruid, command));
-                    socket.send(commandMsg);
-
-                    // if the current note is different from previous 
-                    // if (prevPitch && pitch.note !== prevPitch.note) {
-                    //     let command = basicChromatic(pitch) 
-                    //     console.log(command)
-                    //     let commandMsg = JSON.stringify(messaging.command(tuid, ruid, command))
-                    //     socket.send(commandMsg)
-                    // }
+                    var instruction = msg.instruction(tuid, ruid, command);
+                    socket.send(JSON.stringify(instruction));
                 } else {
                     frequencyElem.innerHTML = 'nil';
                     noteElem.innerHTML = 'nil';
 
-                    var _command = (0, _ctrlCommands.speedsLR)(0, 0);
-                    var _commandMsg = JSON.stringify(_messaging2.default.command(tuid, ruid, _command));
-                    socket.send(_commandMsg);
+                    var _instruction = msg.instruction(tuid, ruid, (0, _ctrl.speedsLR)(0, 0));
+                    socket.send(JSON.stringify(_instruction));
                 }
             }
         });
@@ -103,19 +96,19 @@ var pairButton = document.getElementById('pair');
 pairButton.addEventListener('click', function () {
     ruid = document.getElementById('ruid').value;
     var key = document.getElementById('key').value;
-    var pairMsg = JSON.stringify(_messaging2.default.pair(tuid, ruid, key));
 
-    socket.send(pairMsg);
+    var pair = msg.pair(tuid, ruid, key);
+    socket.send(JSON.stringify(pair));
 });
 
-},{"./ctrlCommands":1,"./messaging":3,"./pitchDetection":4,"./pitchSchemes":5,"./util/notes":6}],3:[function(require,module,exports){
+},{"./ctrl":1,"./messages":3,"./pitch/detection":4,"./pitch/schemes":6,"./pitch/util/conversions":7}],3:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
 // Implementation of ViolCtrl Websocket API for transmitter devices
-function transmitterConnect() {
+function connect() {
     return {
         type: 'transmitter_connect'
     };
@@ -130,21 +123,19 @@ function pair(tuid, ruid, key) {
     };
 }
 
-function command(tuid, ruid, command) {
+function instruction(tuid, ruid, instruction) {
     return {
         type: 'command',
         tuid: tuid,
         ruid: ruid,
-        command: command
+        instruction: instruction
     };
 }
 
 // TODO: why do i need to export default here?
-exports.default = {
-    transmitterConnect: transmitterConnect,
-    pair: pair,
-    command: command
-};
+exports.connect = connect;
+exports.pair = pair;
+exports.instruction = instruction;
 
 },{}],4:[function(require,module,exports){
 'use strict';
@@ -156,7 +147,7 @@ exports.PitchDetector = undefined;
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /* options:
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        configish
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       - goodCorrelationThreshold
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       - correlationThreshold
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        - rmsThreshold
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        -  
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
@@ -167,12 +158,11 @@ var _createClass = function () { function defineProperties(target, props) { for 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        - 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
 
-
-var _notes = require('./util/notes');
+var _pitch = require('./pitch');
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var PitchDetector = exports.PitchDetector = function () {
+var PitchDetector = function () {
     function PitchDetector(options) {
         var _this = this;
 
@@ -256,14 +246,14 @@ var PitchDetector = exports.PitchDetector = function () {
                 return;
             }
 
-            var prevPitch = this.stats.pitch;
-            this.stats = { prevPitch: prevPitch };
+            // let prevPitch = this.stats.pitch
+            // this.stats = { prevPitch }
+            this.stats = {};
 
             var buffer = audioEvent.inputBuffer.getChannelData(0);
             var bufferLength = this.bufferLength;
             var maxSamples = this.maxSamples;
             var rms = 0;
-            var volume = 0;
             var peak = 0;
 
             // compute root mean sqaure
@@ -271,10 +261,8 @@ var PitchDetector = exports.PitchDetector = function () {
                 if (buffer[i] > peak) {
                     peak = buffer[i];
                 }
-                volume += Math.abs(buffer[i]);
                 rms += Math.pow(buffer[i], 2);
             }
-            volume /= bufferLength;
             rms = Math.sqrt(rms / bufferLength);
 
             // is there enough signal?
@@ -312,7 +300,7 @@ var PitchDetector = exports.PitchDetector = function () {
 
                     var frequency = this.sampleRate / (bestOffset + shift);
 
-                    this.stats.pitch = _notes.Pitch.fromFrequency(frequency);
+                    this.stats.pitch = _pitch.Pitch.fromFrequency(frequency);
                     break;
                 }
                 lastCorrelation = correlation;
@@ -323,24 +311,101 @@ var PitchDetector = exports.PitchDetector = function () {
     return PitchDetector;
 }();
 
-// when a pitch is detected, if it matches one of the
-// entries in the command map say (437-443 -> forward), 
-// send off the command to the server
-// so i need a command map. is that passed to this module
-// or is it defined here? i think it should be defined here
-// because it's not like that main code is changing any time
-// soon. for right now, it's not a parametric thing
-// it will be later
+exports.PitchDetector = PitchDetector;
 
-},{"./util/notes":6}],5:[function(require,module,exports){
+},{"./pitch":5}],5:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.basicChromatic = basicChromatic;
+exports.Pitch = undefined;
 
-var _ctrlCommands = require('./ctrlCommands');
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _conversions = require('./util/conversions');
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+// I think i hate getters and setters
+var Pitch = function () {
+    function Pitch(form) {
+        _classCallCheck(this, Pitch);
+
+        if (form.frequency) {
+            this._frequency = form.frequency;
+        } else if (form.note) {
+            this._note = form.note;
+        }
+    }
+
+    _createClass(Pitch, [{
+        key: 'frequency',
+        get: function get() {
+            if (this._frequency) {
+                return this._frequency;
+            }
+
+            if (this._note) {
+                this._frequency = (0, _conversions.noteToFrequency)(this._note);
+                return this._frequency;
+            }
+        }
+    }, {
+        key: 'note',
+        get: function get() {
+            if (this._note) {
+                return this._note;
+            }
+
+            if (this._frequency) {
+                this._note = (0, _conversions.frequencyToNote)(this._frequency);
+                return this._note;
+            }
+        }
+    }, {
+        key: 'octave',
+        get: function get() {
+            // using getter
+            var note = this.note;
+            return Math.floor((note - 48) / 12) + 3;
+        }
+
+        // probably better to do this on the fly
+        // get noteClass() {
+        //     if (this._noteClass) {
+        //         return this.noteClass 
+        //     } 
+        //     this._noteClass = note % 11
+        //     return this.noteClass 
+        // }
+
+    }], [{
+        key: 'fromFrequency',
+        value: function fromFrequency(frequency) {
+            return new Pitch({ frequency: frequency });
+        }
+    }, {
+        key: 'fromNote',
+        value: function fromNote(note) {
+            return new Pitch({ note: note });
+        }
+    }]);
+
+    return Pitch;
+}();
+
+exports.Pitch = Pitch;
+
+},{"./util/conversions":7}],6:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.basicChromatic = undefined;
+
+var _ctrl = require('../ctrl');
 
 // really obscure pitch scheme specific for viola 
 // TODO: generalize
@@ -348,6 +413,7 @@ function basicChromatic(pitch) {
     var octave = pitch.octave;
     // note 0 through 11 (C C# ... B) 
     var noteClass = pitch.note % 12;
+    // console.log(noteClass)
 
     var leftSpeed = void 0;
     var rightSpeed = void 0;
@@ -373,112 +439,43 @@ function basicChromatic(pitch) {
         rightSpeed = -1 / 2;
     }
 
+    // console.log(leftSpeed, rightSpeed)
+
     if (octave === 3) {
         scaleFactor = 0.5;
-        return (0, _ctrlCommands.speedsLR)(leftSpeed * scaleFactor, rightSpeed * scaleFactor);
+        return (0, _ctrl.speedsLR)(leftSpeed * scaleFactor, rightSpeed * scaleFactor);
     } else if (octave === 4) {
         scaleFactor = 0.85;
-        return (0, _ctrlCommands.speedsLR)(leftSpeed * scaleFactor, rightSpeed * scaleFactor);
+        return (0, _ctrl.speedsLR)(leftSpeed * scaleFactor, rightSpeed * scaleFactor);
     } else if (octave === 5) {
         scaleFactor = 1;
-        return (0, _ctrlCommands.speedsLR)(leftSpeed * scaleFactor, rightSpeed * scaleFactor);
+        return (0, _ctrl.speedsLR)(leftSpeed * scaleFactor, rightSpeed * scaleFactor);
     }
 } /* Module Description:
    * Functions that map frequencies to commands for the RPi
    */
 
-},{"./ctrlCommands":1}],6:[function(require,module,exports){
+exports.basicChromatic = basicChromatic;
+
+},{"../ctrl":1}],7:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+var semitone = Math.pow(2, 1 / 12);
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+// Note 69 is A4 is 440Hz is the reference point used here
+function frequencyToNote(frequency) {
+    return 69 + Math.round(Math.log(frequency / 440) / Math.log(semitone));
+}
 
+function noteToFrequency(note) {
+    return 440 + (note - 69) * semitone;
+}
+
+exports.semitone = semitone;
 exports.frequencyToNote = frequencyToNote;
 exports.noteToFrequency = noteToFrequency;
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-// ratio of two notes a half step apart in 12-tone equal temperament
-var semitone = exports.semitone = Math.pow(2, 1 / 12);
-
-function frequencyToNote(f) {
-    return 69 + Math.round(Math.log(f / 440) / Math.log(semitone));
-}
-
-function noteToFrequency(n) {
-    return 440 + (n - 69) * semitone;
-}
-
-// I think i hate getters and setters
-
-var Pitch = exports.Pitch = function () {
-    function Pitch(form) {
-        _classCallCheck(this, Pitch);
-
-        if (form.frequency) {
-            this._frequency = form.frequency;
-        } else if (form.note) {
-            this._note = form.note;
-        }
-    }
-
-    _createClass(Pitch, [{
-        key: "frequency",
-        get: function get() {
-            if (this._frequency) {
-                return this._frequency;
-            }
-
-            if (this._note) {
-                this._frequency = 440 + (this._note - 69) * (Math.pow(2, 1) / 12);
-                return this._frequency;
-            }
-        }
-    }, {
-        key: "note",
-        get: function get() {
-            if (this._note) {
-                return this._note;
-            }
-
-            if (this._frequency) {
-                this._note = frequencyToNote(this._frequency);
-                return this._note;
-            }
-        }
-    }, {
-        key: "octave",
-        get: function get() {
-            // using getter
-            var note = this.note;
-            return Math.floor((note - 48) / 12) + 3;
-        }
-
-        // probably better to do this on the fly
-        // get noteClass() {
-        //     if (this._noteClass) {
-        //         return this.noteClass 
-        //     } 
-        //     this._noteClass = note % 11
-        //     return this.noteClass 
-        // }
-
-    }], [{
-        key: "fromFrequency",
-        value: function fromFrequency(frequency) {
-            return new Pitch({ frequency: frequency });
-        }
-    }, {
-        key: "fromNote",
-        value: function fromNote(note) {
-            return new Pitch({ note: note });
-        }
-    }]);
-
-    return Pitch;
-}();
 
 },{}]},{},[2]);

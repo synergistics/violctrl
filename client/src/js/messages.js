@@ -1,5 +1,5 @@
 // Implementation of ViolCtrl Websocket API for transmitter devices
-function transmitterConnect() {
+function connect() {
     return {
         type: 'transmitter_connect'
     } 
@@ -14,18 +14,18 @@ function pair(tuid, ruid, key) {
     } 
 }
 
-function command(tuid, ruid, command) {
+function instruction(tuid, ruid, instruction) {
     return {
         type: 'command',
         tuid,
         ruid,
-        command
+        instruction
     }
 }
 
 // TODO: why do i need to export default here?
-export default {
-    transmitterConnect,
+export {
+    connect,
     pair,
-    command
+    instruction
 }

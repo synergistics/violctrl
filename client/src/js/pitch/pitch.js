@@ -1,16 +1,7 @@
-// ratio of two notes a half step apart in 12-tone equal temperament
-export const semitone = 2**(1/12)
-
-export function frequencyToNote(f) {
-    return 69 + Math.round(Math.log(f/440) / Math.log(semitone))
-}
-
-export function noteToFrequency(n) {
-    return 440 + (n - 69)*semitone
-}
+import { frequencyToNote, noteToFrequency } from './util/conversions'
 
 // I think i hate getters and setters
-export class Pitch {
+class Pitch {
     constructor(form) {
         if (form.frequency) {
             this._frequency = form.frequency
@@ -34,7 +25,7 @@ export class Pitch {
         }
 
         if (this._note) {
-            this._frequency = 440 + (this._note - 69)*(2**1/12)
+            this._frequency = noteToFrequency(this._note) 
             return this._frequency
         }
     }
@@ -64,4 +55,8 @@ export class Pitch {
     //     this._noteClass = note % 11
     //     return this.noteClass 
     // }
+}
+
+export {
+    Pitch
 }

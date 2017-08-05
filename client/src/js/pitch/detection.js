@@ -1,6 +1,6 @@
 /* options:
   configish
-  - goodCorrelationThreshold
+  - correlationThreshold
   - rmsThreshold
   -  
 
@@ -10,9 +10,10 @@
   - sampleRate
   - 
 */
-import { Pitch } from './util/notes'
 
-export class PitchDetector {
+import { Pitch } from './pitch'
+
+class PitchDetector {
     constructor(options) {
         this.context = options.context
         this.input = options.input
@@ -88,14 +89,14 @@ export class PitchDetector {
     autoCorrelate(audioEvent) {
         if (!this.running) { return }
 
-        let prevPitch = this.stats.pitch
-        this.stats = { prevPitch }
+        // let prevPitch = this.stats.pitch
+        // this.stats = { prevPitch }
+        this.stats = {}
 
         let buffer = audioEvent.inputBuffer.getChannelData(0)
         let bufferLength = this.bufferLength
         let maxSamples = this.maxSamples 
         let rms = 0
-        let volume = 0
         let peak = 0
 
         // compute root mean sqaure
@@ -103,10 +104,8 @@ export class PitchDetector {
             if (buffer[i] > peak) {
                 peak = buffer[i] 
             }
-            volume += Math.abs(buffer[i])
             rms += buffer[i]**2
         }
-        volume /= bufferLength
         rms = Math.sqrt(rms/bufferLength) 
 
         // is there enough signal?
@@ -154,11 +153,6 @@ export class PitchDetector {
     }
 }
 
-// when a pitch is detected, if it matches one of the
-// entries in the command map say (437-443 -> forward), 
-// send off the command to the server
-// so i need a command map. is that passed to this module
-// or is it defined here? i think it should be defined here
-// because it's not like that main code is changing any time
-// soon. for right now, it's not a parametric thing
-// it will be later
+export {
+    PitchDetector
+}

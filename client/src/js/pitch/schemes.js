@@ -2,15 +2,16 @@
  * Functions that map frequencies to commands for the RPi
  */
 
-import { speedsLR } from './ctrlCommands'
+import { speedsLR } from '../ctrl'
 
 
 // really obscure pitch scheme specific for viola 
 // TODO: generalize
-export function basicChromatic(pitch) { 
+function basicChromatic(pitch) { 
     let octave = pitch.octave
     // note 0 through 11 (C C# ... B) 
     let noteClass = pitch.note % 12
+    // console.log(noteClass)
 
     let leftSpeed
     let rightSpeed
@@ -42,6 +43,8 @@ export function basicChromatic(pitch) {
         rightSpeed = -1/2 
     }
 
+    // console.log(leftSpeed, rightSpeed)
+
     if (octave === 3) {
         scaleFactor = 0.5    
         return speedsLR(leftSpeed*scaleFactor, rightSpeed*scaleFactor)
@@ -55,4 +58,8 @@ export function basicChromatic(pitch) {
         return speedsLR(leftSpeed*scaleFactor, rightSpeed*scaleFactor)
     }
 
+}
+
+export {
+    basicChromatic    
 }

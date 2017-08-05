@@ -1,9 +1,10 @@
 // TODO: TRY LODASH
-import { basicChromatic } from './pitchSchemes'
-import { PitchDetector } from './pitchDetection'
-import { frequencyToNote } from './util/notes'
-import { speedsLR } from './ctrlCommands'
-import messaging from './messaging'
+import { basicChromatic } from './pitch/schemes'
+import { PitchDetector } from './pitch/detection'
+import { frequencyToNote } from './pitch/util/conversions'
+import { speedsLR } from './ctrl'
+// maybe turn transmitter into a class?
+import * as msg from './messages'
 
 let tuid
 let ruid
@@ -12,8 +13,8 @@ const socket = new WebSocket(`ws://${location.hostname}:3000`)
 
 socket.addEventListener('open', (event) => {
     // tell server a transmitter is connecting
-    let transmitterMsg = JSON.stringify(messaging.transmitterConnect())
-    socket.send(transmitterMsg)
+    let connect = msg.connect()
+    socket.send(JSON.stringify(connect))
 })
 
 socket.addEventListener('close', () => {
@@ -47,24 +48,15 @@ socket.addEventListener('message', (message) => {
 
                     let command = basicChromatic(pitch) 
                     console.log(command)
-                    let commandMsg = JSON.stringify(messaging.command(tuid, ruid, command))
-                    socket.send(commandMsg)
-                    
-                    // if the current note is different from previous 
-                    // if (prevPitch && pitch.note !== prevPitch.note) {
-                    //     let command = basicChromatic(pitch) 
-                    //     console.log(command)
-                    //     let commandMsg = JSON.stringify(messaging.command(tuid, ruid, command))
-                    //     socket.send(commandMsg)
-                    // }
+                    let instruction = msg.instruction(tuid, ruid, command)
+                    socket.send(JSON.stringify(instruction))
                 }
                 else {
                     frequencyElem.innerHTML = 'nil'
                     noteElem.innerHTML = 'nil'
 
-                    let command = speedsLR(0, 0)
-                    let commandMsg = JSON.stringify(messaging.command(tuid, ruid, command))
-                    socket.send(commandMsg)
+                    let instruction = msg.instruction(tuid, ruid, speedsLR(0,0))
+                    socket.send(JSON.stringify(instruction))
                 }
             }
         })
@@ -80,7 +72,7 @@ let pairButton = document.getElementById('pair')
 pairButton.addEventListener('click', function() {
     ruid = document.getElementById('ruid').value
     let key = document.getElementById('key').value
-    let pairMsg = JSON.stringify(messaging.pair(tuid, ruid, key))
 
-    socket.send(pairMsg)
+    let pair = msg.pair(tuid, ruid, key)
+    socket.send(JSON.stringify(pair))
 })
