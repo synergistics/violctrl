@@ -8,9 +8,10 @@ import { speedsLR } from '../ctrl'
 // really obscure pitch scheme specific for viola 
 // TODO: generalize
 function basicChromatic(pitch) { 
-    let octave = pitch.octave
+    let octave = pitch.octave()
+    
     // note 0 through 11 (C C# ... B) 
-    let noteClass = pitch.note % 12
+    let noteClass = pitch.noteClass()
     // console.log(noteClass)
 
     let leftSpeed

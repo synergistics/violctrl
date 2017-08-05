@@ -89,9 +89,9 @@ class PitchDetector {
     autoCorrelate(audioEvent) {
         if (!this.running) { return }
 
-        // let prevPitch = this.stats.pitch
-        // this.stats = { prevPitch }
-        this.stats = {}
+        let lastPitch = this.stats.pitch || Pitch.fromFrequency(-1)
+        this.stats = { lastPitch }
+        // this.stats = {}
 
         let buffer = audioEvent.inputBuffer.getChannelData(0)
         let bufferLength = this.bufferLength

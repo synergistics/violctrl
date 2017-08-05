@@ -41,22 +41,26 @@ socket.addEventListener('message', (message) => {
             onDetect: (stats) => {
                 // let prevPitch = stats.prevPitch
                 let pitch = stats.pitch
+                let lastPitch = stats.lastPitch
                 if (pitch) {
-                    frequencyElem.innerHTML = pitch.frequency
-                    noteElem.innerHTML = pitch.note
-                    octaveElem.innerHTML = pitch.octave
+                    if (lastPitch && pitch.note !== lastPitch.note) {
+                        frequencyElem.innerHTML = pitch.frequency
+                        noteElem.innerHTML = pitch.note
+                        octaveElem.innerHTML = pitch.octave()
 
-                    let command = basicChromatic(pitch) 
-                    console.log(command)
-                    let instruction = msg.instruction(tuid, ruid, command)
-                    socket.send(JSON.stringify(instruction))
+                        let instruction = basicChromatic(pitch)
+                        console.log(instruction)
+                        let instructionMsg = msg.instruction(tuid, ruid, instruction) 
+                        socket.send(JSON.stringify(instructionMsg))
+                    }
                 }
                 else {
                     frequencyElem.innerHTML = 'nil'
                     noteElem.innerHTML = 'nil'
 
-                    let instruction = msg.instruction(tuid, ruid, speedsLR(0,0))
-                    socket.send(JSON.stringify(instruction))
+                    let instruction = speedsLR(0,0)
+                    let instructionMsg = msg.instruction(tuid, ruid, instruction)
+                    socket.send(JSON.stringify(instructionMsg))
                 }
             }
         })

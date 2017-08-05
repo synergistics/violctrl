@@ -67,21 +67,25 @@ socket.addEventListener('message', function (message) {
             onDetect: function onDetect(stats) {
                 // let prevPitch = stats.prevPitch
                 var pitch = stats.pitch;
+                var lastPitch = stats.lastPitch;
                 if (pitch) {
-                    frequencyElem.innerHTML = pitch.frequency;
-                    noteElem.innerHTML = pitch.note;
-                    octaveElem.innerHTML = pitch.octave;
+                    if (lastPitch && pitch.note !== lastPitch.note) {
+                        frequencyElem.innerHTML = pitch.frequency;
+                        noteElem.innerHTML = pitch.note;
+                        octaveElem.innerHTML = pitch.octave();
 
-                    var command = (0, _schemes.basicChromatic)(pitch);
-                    console.log(command);
-                    var instruction = msg.instruction(tuid, ruid, command);
-                    socket.send(JSON.stringify(instruction));
+                        var instruction = (0, _schemes.basicChromatic)(pitch);
+                        console.log(instruction);
+                        var instructionMsg = msg.instruction(tuid, ruid, instruction);
+                        socket.send(JSON.stringify(instructionMsg));
+                    }
                 } else {
                     frequencyElem.innerHTML = 'nil';
                     noteElem.innerHTML = 'nil';
 
-                    var _instruction = msg.instruction(tuid, ruid, (0, _ctrl.speedsLR)(0, 0));
-                    socket.send(JSON.stringify(_instruction));
+                    var _instruction = (0, _ctrl.speedsLR)(0, 0);
+                    var _instructionMsg = msg.instruction(tuid, ruid, _instruction);
+                    socket.send(JSON.stringify(_instructionMsg));
                 }
             }
         });
@@ -246,11 +250,11 @@ var PitchDetector = function () {
                 return;
             }
 
-            // let prevPitch = this.stats.pitch
-            // this.stats = { prevPitch }
-            this.stats = {};
+            var lastPitch = this.stats.pitch || _pitch.Pitch.fromFrequency(-1);
+            this.stats = { lastPitch: lastPitch
+                // this.stats = {}
 
-            var buffer = audioEvent.inputBuffer.getChannelData(0);
+            };var buffer = audioEvent.inputBuffer.getChannelData(0);
             var bufferLength = this.bufferLength;
             var maxSamples = this.maxSamples;
             var rms = 0;
@@ -328,6 +332,10 @@ var _conversions = require('./util/conversions');
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 // I think i hate getters and setters
+// General rule I'm thinking about here is to only make getters out of properties
+// that don't perform any computations beyond saving a value
+// Accessing a property and creating it if it doesn't exist is a decent use
+// case for a getter under this definition
 var Pitch = function () {
     function Pitch(form) {
         _classCallCheck(this, Pitch);
@@ -340,6 +348,18 @@ var Pitch = function () {
     }
 
     _createClass(Pitch, [{
+        key: 'octave',
+        value: function octave() {
+            // using getter
+            var note = this.note;
+            return Math.floor((note - 48) / 12) + 3;
+        }
+    }, {
+        key: 'noteClass',
+        value: function noteClass() {
+            return this.note % 12;
+        }
+    }, {
         key: 'frequency',
         get: function get() {
             if (this._frequency) {
@@ -363,23 +383,6 @@ var Pitch = function () {
                 return this._note;
             }
         }
-    }, {
-        key: 'octave',
-        get: function get() {
-            // using getter
-            var note = this.note;
-            return Math.floor((note - 48) / 12) + 3;
-        }
-
-        // probably better to do this on the fly
-        // get noteClass() {
-        //     if (this._noteClass) {
-        //         return this.noteClass 
-        //     } 
-        //     this._noteClass = note % 11
-        //     return this.noteClass 
-        // }
-
     }], [{
         key: 'fromFrequency',
         value: function fromFrequency(frequency) {
@@ -410,9 +413,10 @@ var _ctrl = require('../ctrl');
 // really obscure pitch scheme specific for viola 
 // TODO: generalize
 function basicChromatic(pitch) {
-    var octave = pitch.octave;
+    var octave = pitch.octave();
+
     // note 0 through 11 (C C# ... B) 
-    var noteClass = pitch.note % 12;
+    var noteClass = pitch.noteClass();
     // console.log(noteClass)
 
     var leftSpeed = void 0;

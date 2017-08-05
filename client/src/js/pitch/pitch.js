@@ -1,6 +1,10 @@
 import { frequencyToNote, noteToFrequency } from './util/conversions'
 
 // I think i hate getters and setters
+// General rule I'm thinking about here is to only make getters out of properties
+// that don't perform any computations beyond saving a value
+// Accessing a property and creating it if it doesn't exist is a decent use
+// case for a getter under this definition
 class Pitch {
     constructor(form) {
         if (form.frequency) {
@@ -41,20 +45,15 @@ class Pitch {
         }
     }
 
-    get octave() {
+    octave() {
         // using getter
         let note = this.note 
         return Math.floor((note - 48) / 12) + 3 
     }
 
-    // probably better to do this on the fly
-    // get noteClass() {
-    //     if (this._noteClass) {
-    //         return this.noteClass 
-    //     } 
-    //     this._noteClass = note % 11
-    //     return this.noteClass 
-    // }
+    noteClass() {
+        return this.note % 12
+    }
 }
 
 export {
