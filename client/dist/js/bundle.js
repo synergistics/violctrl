@@ -1,7 +1,28 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 'use strict';
 
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.speedsLR = speedsLR;
+function speedsLR(leftSpeed, rightSpeed) {
+    return {
+        type: 'speedsLR',
+        leftSpeed: leftSpeed,
+        rightSpeed: rightSpeed
+    };
+}
+
+},{}],2:[function(require,module,exports){
+'use strict';
+
+var _pitchSchemes = require('./pitchSchemes');
+
 var _pitchDetection = require('./pitchDetection');
+
+var _notes = require('./util/notes');
+
+var _ctrlCommands = require('./ctrlCommands');
 
 var _messaging = require('./messaging');
 
@@ -9,7 +30,8 @@ var _messaging2 = _interopRequireDefault(_messaging);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var tuid = void 0;
+var tuid = void 0; // TODO: TRY LODASH
+
 var ruid = void 0;
 var paired = false;
 var socket = new WebSocket('ws://' + location.hostname + ':3000');
@@ -32,16 +54,41 @@ socket.addEventListener('message', function (message) {
         tuid = data.tuid;
     } else if (data.type === 'pair_successful') {
         var context = new AudioContext();
+
+        var frequencyElem = document.getElementById('frequency');
+        var noteElem = document.getElementById('note');
+        var octaveElem = document.getElementById('octave');
+
         var pd = new _pitchDetection.PitchDetector({
             context: context,
             bufferLength: 1024,
             onDetect: function onDetect(stats) {
-                var pitchElem = document.getElementById('pitch');
-                var frequency = stats.frequency;
-                if (frequency) {
-                    pitchElem.innerHTML = frequency;
+                // let prevPitch = stats.prevPitch
+                var pitch = stats.pitch;
+                if (pitch) {
+                    frequencyElem.innerHTML = pitch.frequency;
+                    noteElem.innerHTML = pitch.note;
+                    octaveElem.innerHTML = pitch.octave;
+
+                    var command = (0, _pitchSchemes.basicChromatic)(pitch);
+                    console.log(command);
+                    var commandMsg = JSON.stringify(_messaging2.default.command(tuid, ruid, command));
+                    socket.send(commandMsg);
+
+                    // if the current note is different from previous 
+                    // if (prevPitch && pitch.note !== prevPitch.note) {
+                    //     let command = basicChromatic(pitch) 
+                    //     console.log(command)
+                    //     let commandMsg = JSON.stringify(messaging.command(tuid, ruid, command))
+                    //     socket.send(commandMsg)
+                    // }
                 } else {
-                    pitchElem.innerHTML = 'nil';
+                    frequencyElem.innerHTML = 'nil';
+                    noteElem.innerHTML = 'nil';
+
+                    var _command = (0, _ctrlCommands.speedsLR)(0, 0);
+                    var _commandMsg = JSON.stringify(_messaging2.default.command(tuid, ruid, _command));
+                    socket.send(_commandMsg);
                 }
             }
         });
@@ -61,7 +108,7 @@ pairButton.addEventListener('click', function () {
     socket.send(pairMsg);
 });
 
-},{"./messaging":2,"./pitchDetection":3}],2:[function(require,module,exports){
+},{"./ctrlCommands":1,"./messaging":3,"./pitchDetection":4,"./pitchSchemes":5,"./util/notes":6}],3:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -99,29 +146,31 @@ exports.default = {
     command: command
 };
 
-},{}],3:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+exports.PitchDetector = undefined;
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /* options:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       configish
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       - goodCorrelationThreshold
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       - rmsThreshold
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       -  
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       internal variables
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       - onDetect() // what to do when pitch is detected
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       - context :: AudioContext
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       - sampleRate
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       - 
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     */
+
+
+var _notes = require('./util/notes');
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-/* options:
-  configish
-  - goodCorrelationThreshold
-  - rmsThreshold
-  -  
-
-  internal variables
-  - onDetect() // what to do when pitch is detected
-  - context :: AudioContext
-  - sampleRate
-  - 
-*/
 
 var PitchDetector = exports.PitchDetector = function () {
     function PitchDetector(options) {
@@ -133,7 +182,7 @@ var PitchDetector = exports.PitchDetector = function () {
         this.input = options.input;
 
         this.correlationThreshold = 0.9;
-        this.rmsThreshold = 0.01;
+        this.rmsThreshold = 0.05;
 
         this.bufferLength = 1024;
         this.maxSamples = Math.floor(this.bufferLength / 2);
@@ -164,6 +213,7 @@ var PitchDetector = exports.PitchDetector = function () {
                 _this.input = _this.context.createMediaStreamSource(stream);
                 // maybe more complex analysers can be passed as an option.
                 // they can be like decorators for autoCorrelate that can do extra jazz
+                // create analyser node with 1 input and 0 outputs
                 _this.analyser = _this.context.createScriptProcessor(_this.bufferLength, 1, 0);
                 _this.analyser.onaudioprocess = _this.autoCorrelate;
                 _this.start();
@@ -206,28 +256,37 @@ var PitchDetector = exports.PitchDetector = function () {
                 return;
             }
 
+            var prevPitch = this.stats.pitch;
+            this.stats = { prevPitch: prevPitch };
+
             var buffer = audioEvent.inputBuffer.getChannelData(0);
             var bufferLength = this.bufferLength;
             var maxSamples = this.maxSamples;
             var rms = 0;
+            var volume = 0;
+            var peak = 0;
 
             // compute root mean sqaure
             for (var i = 0; i < bufferLength; i++) {
+                if (buffer[i] > peak) {
+                    peak = buffer[i];
+                }
+                volume += Math.abs(buffer[i]);
                 rms += Math.pow(buffer[i], 2);
             }
-            rms /= bufferLength;
+            volume /= bufferLength;
+            rms = Math.sqrt(rms / bufferLength);
 
             // is there enough signal?
             if (rms < this.rmsThreshold) {
-                this.stats.frequency = null;
                 return;
             }
 
             var foundPitch = false;
             var bestOffset = -1;
-            var lastCorrelation = 0;
+            var lastCorrelation = 1;
             var bestCorrelation = 0;
-            // let closestMatches = [] 
+
             for (var offset = this.minPeriod; offset < this.maxPeriod; offset++) {
                 var correlation = 0;
                 for (var _i = 0; _i < maxSamples; _i++) {
@@ -239,56 +298,30 @@ var PitchDetector = exports.PitchDetector = function () {
                 this.correlations[offset] = correlation;
 
                 if (correlation > lastCorrelation && correlation > this.correlationThreshold) {
+                    foundPitch = true;
                     if (correlation > bestCorrelation) {
-                        foundPitch = true;
                         bestCorrelation = correlation;
                         bestOffset = offset;
                     }
-
-                    // closestMatches.push({
-                    //     period: offset,
-                    //     correlation
-                    // })
-                    // console.log(correlation, lastCorrelation)
-                    // foundPitch = true
                 } else if (foundPitch) {
+                    var prev = this.correlations[bestOffset - 1];
+                    var next = this.correlations[bestOffset + 1];
+                    var best = this.correlations[bestOffset];
+                    var shift = (next - prev) / best;
+                    shift /= 8;
+
+                    var frequency = this.sampleRate / (bestOffset + shift);
+
+                    this.stats.pitch = _notes.Pitch.fromFrequency(frequency);
                     break;
                 }
-
                 lastCorrelation = correlation;
-            }
-
-            // if (closestMatches.length > 0) {
-            //     let closestMatch = closestMatches.reduce((a,b) => {
-            //         return a.correlation > b.correlation ? a : b 
-            //     })
-            //     console.log(closestMatch)
-            // }
-
-            this.stats = { rms: rms };
-            if (foundPitch) {
-
-                var prev = this.correlations[bestOffset - 1];
-                var next = this.correlations[bestOffset + 1];
-                var shift = (next - prev) / this.correlations[bestOffset];
-                shift /= 8;
-
-                if (Number.isNaN(shift)) {
-                    this.stats.frequency = null;
-                    return;
-                }
-
-                this.stats.frequency = this.sampleRate / (bestOffset + shift);
-            } else {
-                this.stats.frequency = null;
             }
         }
     }]);
 
     return PitchDetector;
 }();
-
-function pitchToNote() {}
 
 // when a pitch is detected, if it matches one of the
 // entries in the command map say (437-443 -> forward), 
@@ -299,4 +332,153 @@ function pitchToNote() {}
 // soon. for right now, it's not a parametric thing
 // it will be later
 
-},{}]},{},[1]);
+},{"./util/notes":6}],5:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.basicChromatic = basicChromatic;
+
+var _ctrlCommands = require('./ctrlCommands');
+
+// really obscure pitch scheme specific for viola 
+// TODO: generalize
+function basicChromatic(pitch) {
+    var octave = pitch.octave;
+    // note 0 through 11 (C C# ... B) 
+    var noteClass = pitch.note % 12;
+
+    var leftSpeed = void 0;
+    var rightSpeed = void 0;
+    var scaleFactor = void 0;
+
+    if ([0, 1, 2, 3].includes(noteClass)) {
+        leftSpeed = 1;
+    } else if ([4, 5, 6, 9].includes(noteClass)) {
+        leftSpeed = -1;
+    } else if ([8, 11].includes(noteClass)) {
+        leftSpeed = 1 / 2;
+    } else if ([7, 10].includes(noteClass)) {
+        leftSpeed = -1 / 2;
+    }
+
+    if ([0, 9, 10, 11].includes(noteClass)) {
+        rightSpeed = 1;
+    } else if ([3, 6, 7, 8].includes(noteClass)) {
+        rightSpeed = -1;
+    } else if ([1, 4].includes(noteClass)) {
+        rightSpeed = 1 / 2;
+    } else if ([2, 5].includes(noteClass)) {
+        rightSpeed = -1 / 2;
+    }
+
+    if (octave === 3) {
+        scaleFactor = 0.5;
+        return (0, _ctrlCommands.speedsLR)(leftSpeed * scaleFactor, rightSpeed * scaleFactor);
+    } else if (octave === 4) {
+        scaleFactor = 0.85;
+        return (0, _ctrlCommands.speedsLR)(leftSpeed * scaleFactor, rightSpeed * scaleFactor);
+    } else if (octave === 5) {
+        scaleFactor = 1;
+        return (0, _ctrlCommands.speedsLR)(leftSpeed * scaleFactor, rightSpeed * scaleFactor);
+    }
+} /* Module Description:
+   * Functions that map frequencies to commands for the RPi
+   */
+
+},{"./ctrlCommands":1}],6:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+exports.frequencyToNote = frequencyToNote;
+exports.noteToFrequency = noteToFrequency;
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+// ratio of two notes a half step apart in 12-tone equal temperament
+var semitone = exports.semitone = Math.pow(2, 1 / 12);
+
+function frequencyToNote(f) {
+    return 69 + Math.round(Math.log(f / 440) / Math.log(semitone));
+}
+
+function noteToFrequency(n) {
+    return 440 + (n - 69) * semitone;
+}
+
+// I think i hate getters and setters
+
+var Pitch = exports.Pitch = function () {
+    function Pitch(form) {
+        _classCallCheck(this, Pitch);
+
+        if (form.frequency) {
+            this._frequency = form.frequency;
+        } else if (form.note) {
+            this._note = form.note;
+        }
+    }
+
+    _createClass(Pitch, [{
+        key: "frequency",
+        get: function get() {
+            if (this._frequency) {
+                return this._frequency;
+            }
+
+            if (this._note) {
+                this._frequency = 440 + (this._note - 69) * (Math.pow(2, 1) / 12);
+                return this._frequency;
+            }
+        }
+    }, {
+        key: "note",
+        get: function get() {
+            if (this._note) {
+                return this._note;
+            }
+
+            if (this._frequency) {
+                this._note = frequencyToNote(this._frequency);
+                return this._note;
+            }
+        }
+    }, {
+        key: "octave",
+        get: function get() {
+            // using getter
+            var note = this.note;
+            return Math.floor((note - 48) / 12) + 3;
+        }
+
+        // probably better to do this on the fly
+        // get noteClass() {
+        //     if (this._noteClass) {
+        //         return this.noteClass 
+        //     } 
+        //     this._noteClass = note % 11
+        //     return this.noteClass 
+        // }
+
+    }], [{
+        key: "fromFrequency",
+        value: function fromFrequency(frequency) {
+            return new Pitch({ frequency: frequency });
+        }
+    }, {
+        key: "fromNote",
+        value: function fromNote(note) {
+            return new Pitch({ note: note });
+        }
+    }]);
+
+    return Pitch;
+}();
+
+},{}]},{},[2]);

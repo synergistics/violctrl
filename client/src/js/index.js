@@ -1,5 +1,8 @@
+// TODO: TRY LODASH
 import { basicChromatic } from './pitchSchemes'
 import { PitchDetector } from './pitchDetection'
+import { frequencyToNote } from './util/notes'
+import { speedsLR } from './ctrlCommands'
 import messaging from './messaging'
 
 let tuid
@@ -26,25 +29,42 @@ socket.addEventListener('message', (message) => {
     }
     else if (data.type === 'pair_successful') {
         let context = new AudioContext()
+
+        let frequencyElem = document.getElementById('frequency')
+        let noteElem = document.getElementById('note')
+        let octaveElem = document.getElementById('octave')
+
         let pd = new PitchDetector({
             context,
             bufferLength: 1024,
             onDetect: (stats) => {
-                // do DOM stuff
-                // convert pitches to commands
-                // do socket stuff
+                // let prevPitch = stats.prevPitch
+                let pitch = stats.pitch
+                if (pitch) {
+                    frequencyElem.innerHTML = pitch.frequency
+                    noteElem.innerHTML = pitch.note
+                    octaveElem.innerHTML = pitch.octave
 
-                let pitchElem = document.getElementById('pitch')
-                let rmsElem = document.getElementById('rms')
-                let volumeElem = document.getElementById('volume')
-                rmsElem.innerHTML = stats.rms
-                volumeElem.innerHTML = stats.peak
-                let frequency = stats.frequency
-                pitchElem.innerHTML = frequency
-                if (frequency) {
-                    // let command = commands.schemes.basicChromatic(frequency) 
-                } else {
-                    // pitchElem.innerHTML = 'nil' 
+                    let command = basicChromatic(pitch) 
+                    console.log(command)
+                    let commandMsg = JSON.stringify(messaging.command(tuid, ruid, command))
+                    socket.send(commandMsg)
+                    
+                    // if the current note is different from previous 
+                    // if (prevPitch && pitch.note !== prevPitch.note) {
+                    //     let command = basicChromatic(pitch) 
+                    //     console.log(command)
+                    //     let commandMsg = JSON.stringify(messaging.command(tuid, ruid, command))
+                    //     socket.send(commandMsg)
+                    // }
+                }
+                else {
+                    frequencyElem.innerHTML = 'nil'
+                    noteElem.innerHTML = 'nil'
+
+                    let command = speedsLR(0, 0)
+                    let commandMsg = JSON.stringify(messaging.command(tuid, ruid, command))
+                    socket.send(commandMsg)
                 }
             }
         })

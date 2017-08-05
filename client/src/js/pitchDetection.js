@@ -10,6 +10,7 @@
   - sampleRate
   - 
 */
+import { Pitch } from './util/notes'
 
 export class PitchDetector {
     constructor(options) {
@@ -50,7 +51,6 @@ export class PitchDetector {
                 // they can be like decorators for autoCorrelate that can do extra jazz
                 // create analyser node with 1 input and 0 outputs
                 this.analyser = this.context.createScriptProcessor(this.bufferLength, 1, 0)
-                // this.analyser.fftSize = 2048
                 this.analyser.onaudioprocess = this.autoCorrelate
                 this.start()        
             })
@@ -88,6 +88,9 @@ export class PitchDetector {
     autoCorrelate(audioEvent) {
         if (!this.running) { return }
 
+        let prevPitch = this.stats.pitch
+        this.stats = { prevPitch }
+
         let buffer = audioEvent.inputBuffer.getChannelData(0)
         let bufferLength = this.bufferLength
         let maxSamples = this.maxSamples 
@@ -108,7 +111,6 @@ export class PitchDetector {
 
         // is there enough signal?
         if (rms < this.rmsThreshold) {
-            this.stats.frequency = null 
             return;
         }
 
@@ -117,7 +119,6 @@ export class PitchDetector {
         let lastCorrelation = 1
         let bestCorrelation = 0
 
-        // 
         for (let offset = this.minPeriod; offset < this.maxPeriod; offset++) {
             let correlation = 0
             for (let i = 0; i < maxSamples; i++) {
@@ -137,33 +138,21 @@ export class PitchDetector {
                 }
             }
             else if (foundPitch) {
+                let prev = this.correlations[bestOffset - 1]
+                let next = this.correlations[bestOffset + 1]
+                let best = this.correlations[bestOffset]
+                let shift = (next - prev) / best 
+                shift /= 8
+
+                let frequency = this.sampleRate / (bestOffset + shift)
+                
+                this.stats.pitch = Pitch.fromFrequency(frequency)
                 break
             }
-
             lastCorrelation = correlation
-        }
-
-        this.stats = { rms, volume, peak }
-        if (foundPitch) {
-            let prev = this.correlations[bestOffset - 1]
-            let next = this.correlations[bestOffset + 1]
-            let best = this.correlations[bestOffset]
-            console.log(bestOffset)
-            let shift = (next - prev) / best 
-            shift /= 8
-
-            let frequency = this.sampleRate / (bestOffset + shift)
-            this.stats.frequency = frequency
-            if (!Number.isNaN(shift)) {
-            }
         }
     }
 }
-
-function pitchToNote() {
-    
-}
-
 
 // when a pitch is detected, if it matches one of the
 // entries in the command map say (437-443 -> forward), 

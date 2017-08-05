@@ -36,10 +36,10 @@ wss.on('connection', (ws, req) => {
 
     ws.on('message', (data) => {
         data = JSON.parse(data) 
-        console.log(ws.metadata)
 
         if (data.type === 'receiver_connect') {
             // receiver provides their id 
+            console.log(ws.metadata)
             let ruid = data.ruid
             ws.metadata.ruid = ruid
             ws.metadata.type = 'receiver'
@@ -69,6 +69,7 @@ wss.on('connection', (ws, req) => {
         }
         else if (data.type === 'pair') {
             // if device is not an established transmitter
+            console.log(ws.metadata)
             let tuid = data.tuid
             let ruid = data.ruid
 
@@ -113,10 +114,10 @@ wss.on('connection', (ws, req) => {
             //     console.log(`receiver ${ruid} does not exist`)
             // }
 
-            let receiver = receivers[ruid]
-            if (receiver.allowedTransmitters.has(tuid)) {
-                receiver.socket.send(data.command) 
-            }
+            // let receiver = receivers[ruid]
+            // if (receiver.allowedTransmitters.has(tuid)) {
+            //     receiver.socket.send(data.command) 
+            // }
         }
     })
 
