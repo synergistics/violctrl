@@ -18,7 +18,7 @@ app.get('/', (req, res) => {
 const server = http.createServer(app)
 const wss = new WebSocket.Server({server})
 
-server.listen(3000, () => {
+server.listen(process.env.PORT || 3000, () => {
     console.log('listening on port 3000')
 })
 
