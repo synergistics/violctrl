@@ -54,7 +54,7 @@ var tuid = void 0; // TODO: TRY LODASH
 
 var ruid = void 0;
 var paired = false;
-var socket = new WebSocket('ws://' + location.hostname + ':3000');
+var socket = new WebSocket('wss://' + location.hostname + ':3000');
 
 socket.addEventListener('open', function (event) {
     // tell server a transmitter is connecting
