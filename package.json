@@ -6,6 +6,9 @@
   "scripts": {
     "build": "babel client/js/src -d client/js/dist/"
   },
+  "engines": {
+    "node": "8.2.1"
+  }
   "repository": {
     "type": "git",
     "url": "git+https://github.com/synergistics/violctrl.git"
