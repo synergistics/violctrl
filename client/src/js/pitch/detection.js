@@ -58,7 +58,8 @@ class PitchDetector {
                 // maybe more complex analysers can be passed as an option.
                 // they can be like decorators for autoCorrelate that can do extra jazz
                 // create analyser node with 1 input and 0 outputs
-                this.analyser = this.context.createScriptProcessor(this.bufferLength, 1, 0)
+                this.analyser = this.context.createScriptProcessor(this.bufferLength, 1, 1)
+                this.analyser.connect(this.context.destination)
                 this.analyser.onaudioprocess = this.autoCorrelate
                 this.start()        
             })

@@ -54,8 +54,8 @@ var tuid = void 0; // TODO: TRY LODASH
 
 var ruid = void 0;
 var paired = false;
-var socket = new WebSocket('wss://violctrl.herokuapp.com');
-// const socket = new WebSocket(`wss://${location.hostname}`)
+// const socket = new WebSocket('wss://violctrl.herokuapp.com')
+var socket = new WebSocket('ws://' + location.hostname + ':3000');
 
 socket.addEventListener('open', function (event) {
     // tell server a transmitter is connecting
@@ -100,6 +100,7 @@ socket.addEventListener('message', function (message) {
                         lastInstruction = instruction;
                     }
                 } else {
+                    console.log(stats.error);
                     frequencyElem.innerHTML = 'nil';
                     noteElem.innerHTML = 'nil';
 
@@ -244,7 +245,8 @@ var PitchDetector = function () {
                 // maybe more complex analysers can be passed as an option.
                 // they can be like decorators for autoCorrelate that can do extra jazz
                 // create analyser node with 1 input and 0 outputs
-                _this.analyser = _this.context.createScriptProcessor(_this.bufferLength, 1, 0);
+                _this.analyser = _this.context.createScriptProcessor(_this.bufferLength, 1, 1);
+                _this.analyser.connect(_this.context.destination);
                 _this.analyser.onaudioprocess = _this.autoCorrelate;
                 _this.start();
             });
