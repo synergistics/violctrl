@@ -111,6 +111,7 @@ wss.on('connection', (ws, req) => {
         else if (data.type === 'instruction') {
             let tuid = data.tuid
             let ruid = data.ruid
+            console.log(data.instruction)
             
             // this check shouldn't be necessary, right?
             // if (receivers[ruid] === undefined) {
