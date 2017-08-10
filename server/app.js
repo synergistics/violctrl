@@ -119,8 +119,13 @@ wss.on('connection', (ws, req) => {
             // }
 
             let receiver = receivers[ruid]
-            if (receiver.allowedTransmitters.has(tuid)) {
-                receiver.socket.send(data.instruction) 
+            if (receiver) {
+                if (receiver.allowedTransmitters.has(tuid)) {
+                    receiver.socket.send(JSON.stringify(data.instruction))
+                }
+            } 
+            else {
+                console.log('receiver ded man') 
             }
         }
         console.log(receivers)
