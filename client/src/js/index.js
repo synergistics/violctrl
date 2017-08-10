@@ -10,6 +10,7 @@ let ruid
 let paired = false
 
 const socket = new WebSocket(`wss://${location.hostname}`)
+// const socket = new WebSocket(`ws://${location.hostname}:3000`)
 
 socket.addEventListener('open', (event) => {
     // tell server a transmitter is connecting

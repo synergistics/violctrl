@@ -18,10 +18,6 @@ app.get('/', (req, res) => {
 const server = http.createServer(app)
 const wss = new WebSocket.Server({server})
 
-server.listen(process.env.PORT || 3000, () => {
-    console.log('listening on port 3000')
-})
-
 let receivers = {
     // we love jessica
     'jessica': {
@@ -32,6 +28,10 @@ let receivers = {
         allowedTransmitters: new Set() 
     }
 }
+server.listen(process.env.PORT || 3000, () => {
+    console.log('listening on port 3000')
+})
+
 let transmitters = {}
 
 wss.on('connection', (ws, req) => {
@@ -42,7 +42,7 @@ wss.on('connection', (ws, req) => {
 
         if (data.type === 'receiver_connect') {
             // receiver provides their id 
-            console.log(ws.metadata)
+            // console.log(data)
             let ruid = data.ruid
             ws.metadata.ruid = ruid
             ws.metadata.type = 'receiver'
@@ -53,8 +53,8 @@ wss.on('connection', (ws, req) => {
                 // maybe a set is better? 
                 allowedTransmitters: new Set()
             }                 
+            // console.log(receivers)
         }
-
         else if (data.type === 'transmitter_connect') {
             // transmitter assigned their id
             let tuid = generateTUID()
@@ -72,9 +72,10 @@ wss.on('connection', (ws, req) => {
         }
         else if (data.type === 'pair') {
             // if device is not an established transmitter
-            console.log(ws.metadata)
+            console.log(data)
             let tuid = data.tuid
             let ruid = data.ruid
+            // console.log(receivers)
 
             if (transmitters[tuid] === undefined) {
                 console.log(`transmitter ${tuid} does not exist`)
@@ -111,7 +112,6 @@ wss.on('connection', (ws, req) => {
         else if (data.type === 'instruction') {
             let tuid = data.tuid
             let ruid = data.ruid
-            console.log(data.instruction)
             
             // this check shouldn't be necessary, right?
             // if (receivers[ruid] === undefined) {
@@ -123,6 +123,7 @@ wss.on('connection', (ws, req) => {
                 receiver.socket.send(data.instruction) 
             }
         }
+        console.log(receivers)
     })
 
     ws.on('close', () => {

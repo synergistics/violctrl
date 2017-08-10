@@ -56,6 +56,7 @@ var ruid = void 0;
 var paired = false;
 
 var socket = new WebSocket('wss://' + location.hostname);
+// const socket = new WebSocket(`ws://${location.hostname}:3000`)
 
 socket.addEventListener('open', function (event) {
     // tell server a transmitter is connecting
