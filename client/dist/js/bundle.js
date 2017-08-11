@@ -108,8 +108,8 @@ socket.addEventListener('message', function (message) {
             onDetect: function onDetect(stats) {
                 if (stats.error === _detection.detectionErrors.NO_ERROR) {
                     var pitch = stats.pitch;
-                    elemFrequency.innerHTML = pitch.frequency;
-                    elemNote.innerHTML = pitch.note;
+                    elemNote.innerHTML = pitch.noteLetter();
+                    elemFrequency.innerHTML = pitch.frequency.toFixed(1) + ' Hz';
 
                     var instruction = (0, _schemes.basicChromatic)(pitch);
                     if (!ctrl.isSameInstruction(instruction, lastInstruction)) {
@@ -388,7 +388,7 @@ exports.PitchDetector = PitchDetector;
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.Pitch = undefined;
+exports.noteLetters = exports.Pitch = undefined;
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
@@ -401,6 +401,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 // that don't perform any computations beyond saving a value
 // Accessing a property and creating it if it doesn't exist is a decent use
 // case for a getter under this definition
+var noteLetters = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
 var Pitch = function () {
     function Pitch(form) {
         _classCallCheck(this, Pitch);
@@ -423,6 +425,11 @@ var Pitch = function () {
         key: 'noteClass',
         value: function noteClass() {
             return this.note % 12;
+        }
+    }, {
+        key: 'noteLetter',
+        value: function noteLetter() {
+            return noteLetters[this.note % 12];
         }
     }, {
         key: 'frequency',
@@ -464,6 +471,7 @@ var Pitch = function () {
 }();
 
 exports.Pitch = Pitch;
+exports.noteLetters = noteLetters;
 
 },{"./util/conversions":7}],6:[function(require,module,exports){
 'use strict';

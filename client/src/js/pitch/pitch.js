@@ -5,6 +5,8 @@ import { frequencyToNote, noteToFrequency } from './util/conversions'
 // that don't perform any computations beyond saving a value
 // Accessing a property and creating it if it doesn't exist is a decent use
 // case for a getter under this definition
+const noteLetters = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']
+
 class Pitch {
     constructor(form) {
         if (form.frequency) {
@@ -54,8 +56,13 @@ class Pitch {
     noteClass() {
         return this.note % 12
     }
+
+    noteLetter() {
+        return noteLetters[this.note % 12]
+    }
 }
 
 export {
-    Pitch
+    Pitch,
+    noteLetters
 }

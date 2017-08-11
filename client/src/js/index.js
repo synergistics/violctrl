@@ -62,8 +62,8 @@ socket.addEventListener('message', (message) => {
             onDetect: (stats) => {
                 if (stats.error === detectionErrors.NO_ERROR) {
                     let pitch = stats.pitch
-                    elemFrequency.innerHTML = pitch.frequency
-                    elemNote.innerHTML = pitch.note
+                    elemNote.innerHTML = pitch.noteLetter()
+                    elemFrequency.innerHTML = `${pitch.frequency.toFixed(1)} Hz`
 
                     let instruction = basicChromatic(pitch)
                     if (!ctrl.isSameInstruction(instruction, lastInstruction)) {
