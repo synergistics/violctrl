@@ -72,8 +72,8 @@ btnPair.addEventListener('click', function () {
     socket.send(JSON.stringify(pair));
 });
 
-// const socket = new WebSocket(`wss://${location.hostname}`)
-var socket = new WebSocket('ws://' + location.hostname + ':3000');
+var socket = new WebSocket('wss://' + location.hostname);
+// const socket = new WebSocket(`ws://${location.hostname}:3000`)
 
 socket.addEventListener('open', function (event) {
     var connect = msg.connect();

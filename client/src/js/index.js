@@ -25,8 +25,8 @@ btnPair.addEventListener('click', function() {
     socket.send(JSON.stringify(pair))
 })
 
-// const socket = new WebSocket(`wss://${location.hostname}`)
-const socket = new WebSocket(`ws://${location.hostname}:3000`)
+const socket = new WebSocket(`wss://${location.hostname}`)
+// const socket = new WebSocket(`ws://${location.hostname}:3000`)
 
 socket.addEventListener('open', (event) => {
     let connect = msg.connect()
