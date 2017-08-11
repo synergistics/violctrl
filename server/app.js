@@ -84,6 +84,7 @@ wss.on('connection', (ws, req) => {
                     type: 'pair_failed',
                     reason: 1   
                 }))
+                return
             }
             if (receivers[ruid] === undefined) {
                 console.log(`receiver ${ruid} does not exist`)
@@ -91,6 +92,7 @@ wss.on('connection', (ws, req) => {
                     type: 'pair_failed',
                     reason: 2
                 }))
+                return
             }
 
             // transmitter supplied correct key
@@ -103,6 +105,7 @@ wss.on('connection', (ws, req) => {
                 }))
             }
             else {
+                console.log(`wrong key: "${data.key}" for receiver: "${data.ruid}"`)
                 ws.send(JSON.stringify({
                     type: 'pair_failed',
                     reason: 0
