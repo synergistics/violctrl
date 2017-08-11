@@ -12,7 +12,7 @@ app.use('/js', express.static(path.join(clientDir, 'dist', 'js')))
 app.use('/css', express.static(path.join(clientDir, 'dist', 'css')))
 
 app.get('/', (req, res) => {
-    res.sendFile('index.html', { root: path.join(clientDir, 'dist') })
+    res.sendFile('pair.html', { root: path.join(clientDir, 'dist') })
 })
 
 const server = http.createServer(app)
@@ -131,7 +131,6 @@ wss.on('connection', (ws, req) => {
                 console.log('receiver ded man') 
             }
         }
-        console.log(receivers)
     })
 
     ws.on('close', () => {

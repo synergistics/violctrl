@@ -50,36 +50,55 @@ var msg = _interopRequireWildcard(_messages);
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-var tuid = void 0; // TODO: TRY LODASH
+var tuid = void 0,
+    ruid = void 0; // TODO: TRY LODASH
 
-var ruid = void 0;
-var paired = false;
 
-var socket = new WebSocket('wss://' + location.hostname);
-// const socket = new WebSocket(`ws://${location.hostname}:3000`)
+var pagePair = document.querySelector('.page-pair');
+var pageCtrl = document.querySelector('.page-ctrl');
+var elemFrequency = document.querySelector('#frequency');
+var elemNote = document.querySelector('#note');
+var elemError = document.querySelector('#error-pair');
+var btnPair = document.querySelector('.btn-pair');
+var inRUID = document.querySelector('#in-ruid');
+var inKey = document.querySelector('#in-key');
+
+btnPair.addEventListener('click', function () {
+    elemError.classList.add('invisible');
+    ruid = inRUID.value;
+    var key = inKey.value;
+
+    var pair = msg.pair(tuid, ruid, key);
+    socket.send(JSON.stringify(pair));
+});
+
+// const socket = new WebSocket(`wss://${location.hostname}`)
+var socket = new WebSocket('ws://' + location.hostname + ':3000');
 
 socket.addEventListener('open', function (event) {
-    // tell server a transmitter is connecting
     var connect = msg.connect();
     socket.send(JSON.stringify(connect));
 });
 
 socket.addEventListener('close', function () {
+    // stop the pitch detector
     console.log('done boys');
 });
 
-// can I keep tuid local and passed around rather than global?
 socket.addEventListener('message', function (message) {
     var data = JSON.parse(message.data);
 
     if (data.type === 'tuid_assigned') {
         tuid = data.tuid;
     } else if (data.type === 'pair_successful') {
-        var context = new AudioContext();
+        // change to ctrl screen
+        // create the pitch detector
+        // the yoosj
+        // find a better way to do this man
+        pagePair.classList.add('invisible');
+        pageCtrl.classList.remove('invisible');
 
-        var frequencyElem = document.getElementById('frequency');
-        var noteElem = document.getElementById('note');
-        var octaveElem = document.getElementById('octave');
+        var context = new AudioContext();
 
         var lastInstruction = ctrl.stop;
         var pd = new _detection.PitchDetector({
@@ -88,9 +107,8 @@ socket.addEventListener('message', function (message) {
             onDetect: function onDetect(stats) {
                 if (stats.error === _detection.detectionErrors.NO_ERROR) {
                     var pitch = stats.pitch;
-                    frequencyElem.innerHTML = pitch.frequency;
-                    noteElem.innerHTML = pitch.note;
-                    octaveElem.innerHTML = pitch.octave();
+                    elemFrequency.innerHTML = pitch.frequency;
+                    elemNote.innerHTML = pitch.note;
 
                     var instruction = (0, _schemes.basicChromatic)(pitch);
                     if (!ctrl.isSameInstruction(instruction, lastInstruction)) {
@@ -101,15 +119,12 @@ socket.addEventListener('message', function (message) {
                         lastInstruction = instruction;
                     }
                 } else {
-                    console.log(stats.error);
-                    frequencyElem.innerHTML = 'nil';
-                    noteElem.innerHTML = 'nil';
+                    // console.log(stats.error)
+                    elemFrequency.innerHTML = 'nil';
+                    elemNote.innerHTML = 'nil';
 
                     if (stats.error === _detection.detectionErrors.NOT_ENOUGH_SIGNAL) {
                         if (!ctrl.isSameInstruction(lastInstruction, ctrl.stop)) {
-                            frequencyElem.innerHTML = 'nil';
-                            noteElem.innerHTML = 'nil';
-
                             var _instruction = ctrl.stop;
                             var _instructionMsg = msg.instruction(tuid, ruid, _instruction);
                             socket.send(JSON.stringify(_instructionMsg));
@@ -121,19 +136,18 @@ socket.addEventListener('message', function (message) {
             }
         });
     } else if (data.type === 'pair_failed') {
-        // do some dom stuff 
+        elemError.classList.remove('invisible');
+        if (data.reason === 0) {
+            elemError.innerHTML = 'incorrect credentials';
+        } else if (data.reason === 1) {
+            elemError.innerHTML = 'internal error, transmitter does not exist';
+        } else if (data.reason === 2) {
+            elemError.innerHTML = 'receiver ' + ruid + ' is not up';
+        }
+        inKey.value = '';
     }
 
     console.log(data);
-});
-
-var pairButton = document.getElementById('pair');
-pairButton.addEventListener('click', function () {
-    ruid = document.getElementById('ruid').value;
-    var key = document.getElementById('key').value;
-
-    var pair = msg.pair(tuid, ruid, key);
-    socket.send(JSON.stringify(pair));
 });
 
 },{"./ctrl":1,"./messages":3,"./pitch/detection":4,"./pitch/schemes":6,"./pitch/util/conversions":7}],3:[function(require,module,exports){
