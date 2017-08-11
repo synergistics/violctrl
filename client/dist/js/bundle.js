@@ -52,6 +52,7 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 var tuid = void 0,
     ruid = void 0; // TODO: TRY LODASH
+// TODO: SETUP URL HASHES SO THAT HISTORY NAVIGATION ISN'T Broken
 
 
 var pagePair = document.querySelector('.page-pair');

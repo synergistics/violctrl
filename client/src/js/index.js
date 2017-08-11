@@ -1,4 +1,5 @@
 // TODO: TRY LODASH
+// TODO: SETUP URL HASHES SO THAT HISTORY NAVIGATION ISN'T Broken
 import { basicChromatic } from './pitch/schemes'
 import { PitchDetector, detectionErrors } from './pitch/detection'
 import { frequencyToNote } from './pitch/util/conversions'
