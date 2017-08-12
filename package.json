@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/synergistics/violctrl#readme",
   "dependencies": {
+    "color-string": "^1.5.2",
     "express": "^4.15.3",
     "ws": "^3.0.0"
   },

@@ -48,7 +48,6 @@ class Pitch {
     }
 
     octave() {
-        // using getter
         let note = this.note 
         return Math.floor((note - 48) / 12) + 3 
     }

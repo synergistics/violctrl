@@ -1,5 +1,6 @@
 // TODO: TRY LODASH
 // TODO: SETUP URL HASHES SO THAT HISTORY NAVIGATION ISN'T Broken
+import colorString from 'color-string'
 import { basicChromatic } from './pitch/schemes'
 import { PitchDetector, detectionErrors } from './pitch/detection'
 import { frequencyToNote } from './pitch/util/conversions'
@@ -8,6 +9,7 @@ import * as msg from './messages'
 
 let tuid, ruid
 
+let elemContainer = document.querySelector('.page-container')
 let pagePair = document.querySelector('.page-pair')
 let pageCtrl = document.querySelector('.page-ctrl')
 let elemFrequency = document.querySelector('#frequency')
@@ -28,6 +30,7 @@ btnPair.addEventListener('click', function() {
 
 const socket = new WebSocket(`wss://${location.hostname}`)
 // const socket = new WebSocket(`ws://${location.hostname}:3000`)
+console.log(colorString)
 
 socket.addEventListener('open', (event) => {
     let connect = msg.connect()
@@ -67,6 +70,7 @@ socket.addEventListener('message', (message) => {
                     let pitch = stats.pitch
                     elemNote.innerHTML = pitch.noteLetter()
                     elemFrequency.innerHTML = `${pitch.frequency.toFixed(1)} Hz`
+                    changeColor(pitch)
                      
                     let instruction = basicChromatic(pitch)
                     if (!ctrl.isSameInstruction(instruction, lastInstruction)) {
@@ -112,3 +116,45 @@ socket.addEventListener('message', (message) => {
 
     console.log(data)
 })
+
+
+function changeColor(pitch) {
+    let h = ((230 + pitch.noteClass()*30) % 360) / 360
+    let s = Math.min(1, (pitch.octave() + 1) / 10)
+    let l = 0.6
+    let bgColor = hslToRgb(h,s,l)
+    let fgColor = hslToRgb(h,s,l-0.2)
+    // console.log(bgColor, fgColor)
+    let bgString = colorString.to.hex(bgColor)
+    let fgString = colorString.to.hex(fgColor)
+    elemContainer.style.background = bgString
+    elemNote.style.color = fgString
+    elemFrequency.style.color = fgString
+}
+
+// stolen from stackoverflow
+// https://stackoverflow.com/questions/2353211/hsl-to-rgb-color-conversion
+function hslToRgb(h, s, l){
+    var r, g, b;
+
+    if(s == 0){
+        r = g = b = l; // achromatic
+    }else{
+        var hue2rgb = function hue2rgb(p, q, t){
+            if(t < 0) t += 1;
+            if(t > 1) t -= 1;
+            if(t < 1/6) return p + (q - p) * 6 * t;
+            if(t < 1/2) return q;
+            if(t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+            return p;
+        }
+
+        var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        var p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1/3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1/3);
+    }
+
+    return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+}
