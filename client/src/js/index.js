@@ -39,6 +39,9 @@ socket.addEventListener('close', () => {
     console.log('done boys')
 })
 
+let hues = [
+    207,
+]
 socket.addEventListener('message', (message) => {
     let data = JSON.parse(message.data)
 
@@ -64,7 +67,7 @@ socket.addEventListener('message', (message) => {
                     let pitch = stats.pitch
                     elemNote.innerHTML = pitch.noteLetter()
                     elemFrequency.innerHTML = `${pitch.frequency.toFixed(1)} Hz`
-
+                     
                     let instruction = basicChromatic(pitch)
                     if (!ctrl.isSameInstruction(instruction, lastInstruction)) {
                         // console.log(instruction)

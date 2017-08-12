@@ -86,6 +86,7 @@ socket.addEventListener('close', function () {
     console.log('done boys');
 });
 
+var hues = [207];
 socket.addEventListener('message', function (message) {
     var data = JSON.parse(message.data);
 
