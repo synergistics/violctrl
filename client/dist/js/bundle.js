@@ -133,7 +133,7 @@ socket.addEventListener('message', function (message) {
                     // console.log(stats.error)
                     elemFrequency.innerHTML = 'nil';
                     elemNote.innerHTML = 'nil';
-
+                    changeColor(null);
                     if (stats.error === _detection.detectionErrors.NOT_ENOUGH_SIGNAL) {
                         if (!ctrl.isSameInstruction(lastInstruction, ctrl.stop)) {
                             var _instruction = ctrl.stop;
@@ -162,6 +162,12 @@ socket.addEventListener('message', function (message) {
 });
 
 function changeColor(pitch) {
+    if (pitch === null) {
+        elemContainer.style.background = '#FFFFFF';
+        elemNote.style.color = '#000000';
+        elemFrequency.style.color = '#000000';
+        return;
+    }
     var h = (230 + pitch.noteClass() * 30) % 360 / 360;
     var s = Math.min(1, (pitch.octave() + 1) / 10);
     var l = 0.6;
