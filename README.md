@@ -1,1 +1,7 @@
 # ViolCtrl
+## What's going on?
+Set the scene: Summer break 2017, I'll be heading off to college in a few weeks and have a spare raspberry pi from a computer trivia contest I won in April. It's been collecting dust ever since, partly because I haven't spent the time to learn how to use it, but mostly because I don't know what to do with it! Two problems, one solution: salvage the parts from a toy RC car, attach the rPi to the car, build a website that can perform autocorrelating pitch detection on your microphone, convert the pitch data into forward, backward, left, and right commands, send those commands to the rPi and control the car's motors based on the commands!! Did I come up with this at once, knowing what my hardware requirements would be and *not* struggling for far too long weighing the pros and cons of transmitting data over radio, bluetooth, or wifi, finally deciding on wifi and buying parts? Of course not. After that though, the ball was rolling. 
+
+ViolCtrl is comprised of two parts: 
+1. the [website](violctrl.herokuapp.com) that detects the frequency of the input to your device's microphone (usually sounds produced by a viola, in my case) in real time, mapping sound frequency to JSON formatted motor commands and transmitting them to the rPi you've connected to. 
+2. the [violctrlpi](github.com/synergistics/violctrlpi) software running on the rPi which forms a websocket connection to the frontend, listening for commands and sending them to the motors of the car.  
